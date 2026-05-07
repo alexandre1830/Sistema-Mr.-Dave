@@ -64,7 +64,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function buildCard(cls) {
-    const students  = (cls.studentIds || []).map(id => findStudent(id)).filter(Boolean);
+    // Use allStudents filtered by classId — more reliable for both admin and teacher
+    // (teacher's RLS on student_teachers join may not populate cls.studentIds correctly)
+    const students  = allStudents.filter(s => s.classId === cls.id);
     const schedText = (cls.schedules || [])
       .map(s => `${utils.formatDayShort(s.day)} ${s.time}`)
       .join(' · ') || '—';
@@ -291,8 +293,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         </div>`).join('') || '<span class="text-muted">—</span>';
     }
 
-    // Alunos
-    const students = (cls.studentIds || []).map(sid => findStudent(sid)).filter(Boolean);
+    // Alunos — filter by classId from allStudents (works for both admin and teacher)
+    const students = allStudents.filter(s => s.classId === cls.id);
     utils.setTextContent('classStudentCount', students.length);
     const studListEl = document.getElementById('classStudentsList');
     if (studListEl) {

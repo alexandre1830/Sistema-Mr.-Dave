@@ -510,8 +510,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (classId) {
       container.classList.remove('att-students-selector--individual');
 
-      const students = (findClass(classId)?.studentIds || [])
-        .map(id => findStudent(id)).filter(Boolean);
+      // Filter by classId from allStudents (reliable for both admin and teacher)
+      const students = allStudents.filter(s => s.classId === classId);
 
       if (!students.length) {
         container.innerHTML = `<div class="empty-state empty-state--sm">

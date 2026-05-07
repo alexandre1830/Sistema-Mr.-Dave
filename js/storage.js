@@ -844,20 +844,60 @@ HT.storage = (() => {
     if (error) throw error;
   }
 
-  /* Retorna alunos + horários de um professor (para popular o calendário automaticamente) */
+  /**
+   * Retorna horários para o calendário de disponibilidade do professor.
+   * Alunos em turma → uma entrada por turma (usa o horário da turma).
+   * Alunos sem turma → uma entrada por aluno (usa o horário individual).
+   *
+   * Formato retornado: [
+   *   { type: 'class',   classId, label, schedules },
+   *   { type: 'student', studentId, label, schedules },
+   * ]
+   */
   async function getTeacherStudentSchedules(teacherId) {
     const uid = teacherId || (await _uid());
+
+    /* Alunos vinculados ao professor (incluindo class_id) */
     const { data, error } = await db.from('student_teachers')
-      .select('student_id, students(id, name, schedules)')
+      .select('student_id, students(id, name, schedules, class_id)')
       .eq('teacher_id', uid);
     if (error) throw error;
-    return (data || [])
-      .filter(r => r.students)
-      .map(r => ({
-        studentId:   r.students.id,
-        studentName: r.students.name,
-        schedules:   r.students.schedules || [],
+
+    const students = (data || []).filter(r => r.students).map(r => r.students);
+
+    /* Separar alunos com e sem turma */
+    const withClass    = students.filter(s => s.class_id);
+    const withoutClass = students.filter(s => !s.class_id);
+
+    /* Buscar schedules das turmas (única fonte de horário para aulas coletivas) */
+    const classIds = [...new Set(withClass.map(s => s.class_id))];
+    let classMap = {};
+    if (classIds.length) {
+      const { data: classes } = await db.from('classes')
+        .select('id, name, schedules')
+        .in('id', classIds);
+      (classes || []).forEach(c => { classMap[c.id] = c; });
+    }
+
+    /* Entradas de turma (uma por turma, com horário da turma) */
+    const classEntries = classIds
+      .filter(id => classMap[id])
+      .map(id => ({
+        type:      'class',
+        classId:   id,
+        label:     classMap[id].name,
+        schedules: classMap[id].schedules || [],
       }));
+
+    /* Entradas individuais (alunos sem turma, com horário próprio) */
+    const individualEntries = withoutClass.map(s => ({
+      type:      'student',
+      studentId: s.id,
+      label:     s.name,
+      schedules: s.schedules || [],
+    }));
+
+    return [...classEntries, ...individualEntries];
   }
 
   /* ====================================================================

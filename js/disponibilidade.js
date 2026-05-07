@@ -32,10 +32,19 @@ HT.disponibilidade = (() => {
      CONSTRUÇÃO DE EVENTOS
      ==================================================================== */
 
-  /* Converte slots recorrentes de alunos em eventos do FullCalendar */
-  function buildStudentEvents(studentSchedules) {
+  /**
+   * Converte entradas de alunos/turmas em eventos recorrentes do FullCalendar.
+   * Cada entrada pode ser { type:'class', classId, label, schedules }
+   * ou { type:'student', studentId, label, schedules }.
+   */
+  function buildStudentEvents(entries) {
     const events = [];
-    studentSchedules.forEach(({ studentName, schedules }) => {
+    entries.forEach(entry => {
+      const { type, label, schedules } = entry;
+      const idPrefix = type === 'class'
+        ? `class_${entry.classId}`
+        : `student_${entry.studentId || label}`;
+
       (schedules || []).forEach(sc => {
         if (!sc.day || !sc.time) return;
         const dayNum = HT.utils.getDayNumber(sc.day);
@@ -44,17 +53,26 @@ HT.disponibilidade = (() => {
         const [h, m]  = sc.time.split(':').map(Number);
         const endMin  = h * 60 + m + dur;
         const endTime = `${String(Math.floor(endMin / 60)).padStart(2,'0')}:${String(endMin % 60).padStart(2,'0')}`;
+
         events.push({
-          id:          `student_${studentName}_${sc.day}_${sc.time}`,
-          title:       studentName,
-          daysOfWeek:  [dayNum],
-          startTime:   sc.time.length === 5 ? sc.time : sc.time.slice(0,5),
+          id:              `${idPrefix}_${sc.day}_${sc.time}`,
+          title:           label,
+          daysOfWeek:      [dayNum],
+          startTime:       sc.time.length === 5 ? sc.time : sc.time.slice(0, 5),
           endTime,
-          backgroundColor:  COLOR.student.bg,
-          borderColor:      COLOR.student.border,
-          textColor:        '#fff',
-          editable:         false,
-          extendedProps:    { type: 'student', studentName, day: sc.day, time: sc.time, duration: dur },
+          backgroundColor: COLOR.student.bg,
+          borderColor:     COLOR.student.border,
+          textColor:       '#fff',
+          editable:        false,
+          extendedProps:   {
+            type:        'student',
+            isClass:     type === 'class',
+            classId:     entry.classId || null,
+            studentName: label,
+            day:         sc.day,
+            time:        sc.time,
+            duration:    dur,
+          },
         });
       });
     });
@@ -305,11 +323,14 @@ HT.disponibilidade = (() => {
      ==================================================================== */
 
   function openStudentInfo(info) {
-    const { studentName, day, time, duration } = info;
-    $('seTitle').textContent   = studentName;
-    $('seStudent').textContent = studentName;
+    const { studentName, day, time, duration, isClass } = info;
+    const icon = isClass
+      ? '<i class="fa-solid fa-users" style="margin-right:6px;opacity:.7"></i>'
+      : '<i class="fa-solid fa-user" style="margin-right:6px;opacity:.7"></i>';
+    $('seTitle').textContent    = studentName;
+    $('seStudent').innerHTML    = `${icon}${escapeHTML(studentName)}`;
     const dayLabel = DAY_NAMES[HT.utils.getDayNumber(day)] || day;
-    $('seTime').textContent    = `${dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1)} · ${time} (${duration} min)`;
+    $('seTime').textContent     = `${dayLabel.charAt(0).toUpperCase() + dayLabel.slice(1)} · ${time} (${duration} min)`;
     HT.modals.open('studentEventOverlay');
   }
 

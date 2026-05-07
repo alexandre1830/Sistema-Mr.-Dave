@@ -19,10 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const role  = await HT.auth.getRole();
 
   let students, classes, attendance;
-  /* Dados exclusivos por papel */
-  let payments      = [];   /* admin: pagamentos recebidos */
-  let teacherProfile = null; /* teacher: perfil com default_lesson_rate */
-  let studentRates   = {};   /* teacher: { studentId → rateOverride } */
+  let payments = []; /* admin: pagamentos recebidos */
 
   if (role === 'admin') {
     [students, classes, attendance, payments] = await Promise.all([
@@ -32,13 +29,11 @@ document.addEventListener('DOMContentLoaded', async () => {
       storage.getPayments(),
     ]);
   } else {
-    /* Professor: pagamentos são bloqueados por RLS; calcula ganhos pela frequência */
-    [students, classes, attendance, teacherProfile, studentRates] = await Promise.all([
+    /* Professor: attendance ainda é usado para cards gerais (alunos, turmas, próximas aulas) */
+    [students, classes, attendance] = await Promise.all([
       storage.getStudents(),
       storage.getClasses(),
       storage.getAttendance(),
-      storage.getProfile(),
-      storage.getMyStudentRates(),
     ]);
   }
 
@@ -46,7 +41,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   calendar.setData(students, classes);
 
   /* ---------- Cards de resumo ---------- */
-  function loadStats() {
+  async function loadStats() {
     const monthAtt = attendance.filter(r => r.date.startsWith(month));
 
     utils.setTextContent('statStudents', students.length);
@@ -62,54 +57,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       utils.setTextContent('statRevenue', utils.formatCurrency(revenue));
 
     } else {
-      /* ── Professor ── */
-      const defaultRate = Number(teacherProfile?.defaultLessonRate) || 0;
+      /* ── Professor ── usa a mesma lógica do painel de Finanças (HT.payouts) ── */
+      const y    = new Date().getFullYear();
+      const m    = new Date().getMonth();
+      const from = `${y}-${String(m + 1).padStart(2, '0')}-01`;
+      const last = new Date(y, m + 1, 0).getDate();
+      const to   = `${y}-${String(m + 1).padStart(2, '0')}-${String(last).padStart(2, '0')}`;
 
-      /* Separa registros válidos (presente ou justificado) */
-      const validAtt = monthAtt.filter(r => r.status === 'present' || r.status === 'justified');
+      const payout = await HT.payouts.getMyPayout({ from, to });
 
-      /* --- Turmas: agrupa por (classId, date) → uma sessão por chave --- */
-      const classSessionMap = new Map(); /* key → [rateOverrides dos alunos presentes] */
-      validAtt
-        .filter(r => r.classId)
-        .forEach(r => {
-          const key = `${r.classId}|${r.date}`;
-          if (!classSessionMap.has(key)) classSessionMap.set(key, []);
-          const override = studentRates[r.studentId];
-          if (override != null) classSessionMap.get(key).push(Number(override));
-        });
-
-      /* Pagamento por sessão de turma:
-         taxa = max(defaultRate, maior rate_override dos alunos presentes) */
-      const classEarnings = [...classSessionMap.values()].reduce((sum, overrides) => {
-        const sessionRate = overrides.length
-          ? Math.max(defaultRate, ...overrides)
-          : defaultRate;
-        return sum + sessionRate;
-      }, 0);
-
-      /* --- Aulas individuais: um pagamento por aluno por aula --- */
-      const indivAtt = validAtt.filter(r => !r.classId);
-      const indivEarnings = indivAtt.reduce((sum, r) => {
-        const rate = studentRates[r.studentId] != null
-          ? Number(studentRates[r.studentId])
-          : defaultRate;
-        return sum + rate;
-      }, 0);
-
-      /* Frequência: sessões de turma únicas + aulas individuais */
-      utils.setTextContent('statLessons', classSessionMap.size + indivAtt.length);
-
-      /* Pagamento total */
-      const earnings = classEarnings + indivEarnings;
+      utils.setTextContent('statLessons', payout.items.length);
+      utils.setTextContent('statRevenue', utils.formatCurrency(payout.total));
 
       /* Atualizar label e link do card */
       const labelEl = document.getElementById('statRevenueLabel');
       const cardEl  = document.getElementById('statRevenueCard');
       if (labelEl) labelEl.textContent = 'Pagamento do Mês';
-      if (cardEl)  cardEl.href = 'financas-teacher.html';
-
-      utils.setTextContent('statRevenue', utils.formatCurrency(earnings));
+      if (cardEl)  cardEl.href = 'financas.html';
     }
   }
 
@@ -192,7 +156,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* ---------- Init ---------- */
-  loadStats();
+  await loadStats();
   await Promise.all([
     calendar.init('calendar'),
     loadUpcoming(),

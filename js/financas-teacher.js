@@ -3,6 +3,9 @@
    - Detecta papel: se 'admin', não faz nada (financas.js cuida).
    - Se 'teacher', esconde view admin, mostra view teacher e calcula payout
      do mês exibido no seletor de período.
+   - Cada sessão de turma (date + class_id) conta como UMA aula paga,
+     independente do número de alunos. Aulas individuais (sem turma) contam
+     por registro.
    ========================================================================== */
 
 (() => {
@@ -19,7 +22,7 @@
   };
 
   /* Mês em foco — sincroniza com o período exibido no topo */
-  let currentMonth = new Date(); /* primeiro dia do mês corrente */
+  let currentMonth = new Date();
   currentMonth.setDate(1);
 
   function periodBounds(d) {
@@ -41,41 +44,50 @@
 
     const data = await HT.payouts.getMyPayout({ from, to });
 
-    document.getElementById('payoutTotal').textContent     = `R$ ${fmtBR(data.total)}`;
-    document.getElementById('payoutCount').textContent     = data.count;
-    document.getElementById('payoutTotalLessons').textContent =
-      data.items.length;
-    document.getElementById('payoutJustified').textContent =
-      data.items.filter(i => i.status === 'justified').length;
+    /* Cards de resumo */
+    document.getElementById('payoutTotal').textContent        = `R$ ${fmtBR(data.total)}`;
+    document.getElementById('payoutCount').textContent        = data.count;
+    document.getElementById('payoutTotalLessons').textContent = data.items.length;
+    document.getElementById('payoutJustified').textContent    = data.justifiedCount;
 
-    /* Por aluno */
+    /* Por turma / aula */
     const byBody = document.getElementById('payoutByStudentBody');
-    if (!data.byStudent.length) {
+    if (!data.byClass.length) {
       byBody.innerHTML = `<tr class="empty-row"><td colspan="3">
         <div class="empty-state empty-state--sm"><p>Sem aulas no período.</p></div></td></tr>`;
     } else {
-      byBody.innerHTML = data.byStudent
-        .sort((a,b) => b.total - a.total)
-        .map(s => `<tr>
-          <td>${escapeHTML(s.studentName)}</td>
-          <td>${s.count}</td>
-          <td><strong>R$ ${fmtBR(s.total)}</strong></td>
-        </tr>`).join('');
+      byBody.innerHTML = data.byClass
+        .sort((a, b) => b.total - a.total)
+        .map(c => {
+          const label = c.isIndividual
+            ? `<em>${escapeHTML(c.studentName)}</em> <span class="text-muted text-small">(individual)</span>`
+            : escapeHTML(c.className);
+          return `<tr>
+            <td>${label}</td>
+            <td>${c.count}</td>
+            <td><strong>R$ ${fmtBR(c.total)}</strong></td>
+          </tr>`;
+        }).join('');
     }
 
-    /* Itens detalhados */
+    /* Aulas detalhadas */
     const itemsBody = document.getElementById('payoutItemsBody');
     if (!data.items.length) {
       itemsBody.innerHTML = `<tr class="empty-row"><td colspan="4">
         <div class="empty-state empty-state--sm"><p>Sem aulas no período.</p></div></td></tr>`;
     } else {
-      itemsBody.innerHTML = data.items.map(i => `
-        <tr>
-          <td>${i.date.split('-').reverse().join('/')}</td>
-          <td>${escapeHTML(i.studentName)}</td>
-          <td>${STATUS_LABEL[i.status] || i.status}</td>
-          <td>${i.paid ? `R$ ${fmtBR(i.rate)}` : '<span style="opacity:.6">—</span>'}</td>
-        </tr>`).join('');
+      itemsBody.innerHTML = data.items.map(i => {
+        const who = i.isSession
+          ? `${escapeHTML(i.label)} <span class="text-muted text-small">(${i.studentCount} aluno${i.studentCount !== 1 ? 's' : ''})</span>`
+          : escapeHTML(i.label);
+        return `
+          <tr>
+            <td>${i.date.split('-').reverse().join('/')}</td>
+            <td>${who}</td>
+            <td>${STATUS_LABEL[i.status] || i.status}</td>
+            <td>${i.paid ? `R$ ${fmtBR(i.rate)}` : '<span style="opacity:.6">—</span>'}</td>
+          </tr>`;
+      }).join('');
     }
   }
 
@@ -99,7 +111,7 @@
     /* Esconde view admin + botão "Novo Pagamento" */
     document.getElementById('adminFinanceView').style.display = 'none';
     document.getElementById('teacherFinanceView').style.display = '';
-    document.getElementById('addPaymentBtn')?.style.setProperty('display','none');
+    document.getElementById('addPaymentBtn')?.style.setProperty('display', 'none');
 
     bindPeriodNav();
     try { await render(); } catch (err) {

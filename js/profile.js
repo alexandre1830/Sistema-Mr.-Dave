@@ -13,10 +13,18 @@ HT.profile = (() => {
     try {
       const profile     = await HT.storage.getProfile();
       const nameEl      = document.getElementById('sidebarUserName');
+      const roleEl      = document.querySelector('.user-role');
       const initialsEl  = document.querySelector('#sidebarAvatar .user-avatar-initials');
       const avatarEl    = document.getElementById('sidebarAvatar');
 
       if (nameEl)     nameEl.textContent     = profile?.name || 'Professor';
+
+      if (roleEl) {
+        let role = 'teacher';
+        try { role = (await HT.auth?.getRole()) || 'teacher'; } catch {}
+        roleEl.textContent = role === 'admin' ? 'Administrador' : 'Professor';
+      }
+
       if (initialsEl) initialsEl.textContent = getInitials(profile?.name || '');
 
       if (avatarEl) {
@@ -81,7 +89,7 @@ HT.profile = (() => {
               </div>
               <div class="profile-header-info">
                 <h3 class="modal-title" id="profileModalTitle" style="color:#fff"></h3>
-                <span class="profile-header-role">Administrador</span>
+                <span class="profile-header-role" id="profileHeaderRole"></span>
               </div>
             </div>
           </div>
@@ -270,6 +278,14 @@ HT.profile = (() => {
     document.getElementById('profileAvatarInitials').textContent   = initials;
     document.getElementById('profileAvatarLgInitials').textContent = initials;
     document.getElementById('profileModalTitle').textContent       = profile?.name || 'Professor';
+
+    // Label de papel no cabeçalho do modal
+    const roleEl = document.getElementById('profileHeaderRole');
+    if (roleEl) {
+      let role = 'teacher';
+      try { role = (await HT.auth?.getRole()) || 'teacher'; } catch {}
+      roleEl.textContent = role === 'admin' ? 'Administrador' : 'Professor';
+    }
 
     // Mostra/oculta campo de senha atual conforme o método de autenticação
     const hasPassword = await _signedInWithPassword();

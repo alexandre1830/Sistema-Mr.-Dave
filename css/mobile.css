@@ -397,8 +397,8 @@
 
   .page-btn,
   .pagination-btn {
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
   }
 
 }
@@ -456,8 +456,8 @@
   }
 
   .stat-link {
-    width: 28px;
-    height: 28px;
+    width: 36px;
+    height: 36px;
   }
 
 }

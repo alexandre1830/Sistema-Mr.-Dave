@@ -24,7 +24,7 @@ create extension if not exists pg_net;
 
 -- ----- 2) Função utilitária que invoca a Edge Function ------------------
 create or replace function _invoke_generate_monthly_payments() returns void
-  language plpgsql security definer as $$
+  language plpgsql security definer set search_path = public as $$
 declare
   v_url    text;
   v_secret text;

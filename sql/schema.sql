@@ -57,16 +57,23 @@ create policy "profile self update" on profiles for update using (id = auth.uid(
 create policy "profile insert"      on profiles for insert with check (id = auth.uid() or is_admin());
 create policy "profile admin del"   on profiles for delete using (is_admin());
 
--- Trigger: ao criar usuário no auth.users, cria profile automaticamente
+-- Trigger: ao criar usuário no auth.users, cria profile automaticamente.
+-- IMPORTANTE: role é fixado em 'teacher' (segurança: impede auto-promoção
+-- via OTP/magic-link). Admin é promovido manualmente via SQL.
 create or replace function handle_new_user() returns trigger
   language plpgsql security definer set search_path = public as $$
 begin
-  insert into profiles (id, email, name, role)
+  insert into profiles (id, email, name, role, default_lesson_rate)
   values (
     new.id,
     new.email,
-    coalesce(new.raw_user_meta_data->>'name', split_part(new.email,'@',1)),
-    coalesce(new.raw_user_meta_data->>'role', 'teacher')
+    coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+    'teacher',
+    case
+      when (new.raw_user_meta_data->>'default_lesson_rate') is not null
+        then (new.raw_user_meta_data->>'default_lesson_rate')::numeric
+      else null
+    end
   )
   on conflict (id) do nothing;
   return new;
