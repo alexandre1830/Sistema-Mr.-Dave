@@ -118,6 +118,7 @@ HT.utils = (() => {
     present:   'Presente',
     absent:    'Ausente',
     justified: 'Falta justificada',
+    makeup:    'Reposição',
     paid:      'Pago',
     pending:   'Pendente',
     overdue:   'Em atraso',
@@ -200,6 +201,12 @@ HT.utils = (() => {
     };
   }
 
+  /* ---------- Segurança ---------- */
+  function escapeHTML(s) {
+    return String(s ?? '').replace(/[&<>"']/g,
+      c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
+  }
+
   /* ---------- DOM helpers ---------- */
   function qs(selector, context = document)  { return context.querySelector(selector); }
   function qsa(selector, context = document) { return [...context.querySelectorAll(selector)]; }
@@ -230,6 +237,7 @@ HT.utils = (() => {
     formatCurrency, formatPhone, formatDay, formatDayShort, getDayNumber,
     formatLevel, formatLevelShort, formatStatus, formatMethod, getInitials,
     statusBadge, levelBadge, showToast,
+    escapeHTML,
     debounce, qs, qsa, setTextContent, setInputValue, getInputValue,
     show, hide, toggle,
   };

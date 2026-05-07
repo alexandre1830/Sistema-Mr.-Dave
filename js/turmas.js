@@ -146,7 +146,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           <label class="form-label">Dia</label>
           <select name="schedules[${index}][day]" class="form-select">
             <option value="">Selecione</option>
-            ${['monday','tuesday','wednesday','thursday','friday','saturday'].map(d =>
+            ${['monday','tuesday','wednesday','thursday','friday','saturday','sunday'].map(d =>
               `<option value="${d}"${d===data.day?' selected':''}>${utils.formatDay(d)}</option>`
             ).join('')}
           </select>

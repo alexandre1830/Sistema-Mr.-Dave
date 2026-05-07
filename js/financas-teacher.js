@@ -9,10 +9,7 @@
 
   function fmtBR(n) { return Number(n || 0).toFixed(2).replace('.', ','); }
 
-  function escapeHTML(s) {
-    return String(s ?? '').replace(/[&<>"']/g,
-      c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
+  const escapeHTML = s => HT.utils.escapeHTML(s);
 
   const STATUS_LABEL = {
     present:   'Presente',

@@ -157,6 +157,31 @@ HT.storage = (() => {
     return data.map(_toStudent);
   }
 
+  /**
+   * Paginated alternative for large datasets.
+   * @param {object} opts - { page, pageSize, search, level, classId }
+   * @returns {Promise<{ items, total, page, pageSize }>}
+   */
+  async function getStudentsPage({ page = 1, pageSize = 50, search = '', level = '', classId = '' } = {}) {
+    let q = db.from('students')
+      .select('*, student_teachers(teacher_id)', { count: 'exact' })
+      .order('name');
+
+    if (search)  q = q.ilike('name', `%${search}%`);
+    if (level)   q = q.eq('level', level);
+    if (classId) q = q.eq('class_id', classId);
+
+    const from = (page - 1) * pageSize;
+    const to   = from + pageSize - 1;
+    const { data, error, count } = await q.range(from, to);
+    if (error) throw error;
+    return {
+      items: (data || []).map(_toStudent),
+      total: count ?? 0,
+      page, pageSize,
+    };
+  }
+
   async function getStudent(id) {
     const { data, error } = await db.from('students')
       .select('*, student_teachers(teacher_id, rate_override)')
@@ -418,6 +443,37 @@ HT.storage = (() => {
     return data.map(_toAttendance);
   }
 
+  /**
+   * Paginated attendance with optional filters.
+   * Suporta: page, pageSize, dateFrom, dateTo, status, classId, studentId, teacherId.
+   */
+  async function getAttendancePage({
+    page = 1, pageSize = 50,
+    dateFrom = '', dateTo = '', status = '',
+    classId = '', studentId = '', teacherId = '',
+  } = {}) {
+    let q = db.from('attendance')
+      .select('*', { count: 'exact' })
+      .order('date', { ascending: false });
+
+    if (dateFrom)  q = q.gte('date', dateFrom);
+    if (dateTo)    q = q.lte('date', dateTo);
+    if (status)    q = q.eq('status', status);
+    if (classId)   q = q.eq('class_id', classId);
+    if (studentId) q = q.eq('student_id', studentId);
+    if (teacherId) q = q.eq('teacher_id', teacherId);
+
+    const from = (page - 1) * pageSize;
+    const to   = from + pageSize - 1;
+    const { data, error, count } = await q.range(from, to);
+    if (error) throw error;
+    return {
+      items: (data || []).map(_toAttendance),
+      total: count ?? 0,
+      page, pageSize,
+    };
+  }
+
   async function getStudentAttendance(studentId) {
     const { data, error } = await db.from('attendance')
       .select('*').eq('student_id', studentId).order('date', { ascending: false });
@@ -456,6 +512,33 @@ HT.storage = (() => {
       .select('*').order('reference', { ascending: false });
     if (error) throw error;
     return data.map(_toPayment);
+  }
+
+  /**
+   * Paginated payments with optional filters.
+   * Suporta: page, pageSize, reference (mês YYYY-MM), status, studentId.
+   */
+  async function getPaymentsPage({
+    page = 1, pageSize = 50,
+    reference = '', status = '', studentId = '',
+  } = {}) {
+    let q = db.from('payments')
+      .select('*', { count: 'exact' })
+      .order('reference', { ascending: false });
+
+    if (reference) q = q.eq('reference', reference);
+    if (status)    q = q.eq('status', status);
+    if (studentId) q = q.eq('student_id', studentId);
+
+    const from = (page - 1) * pageSize;
+    const to   = from + pageSize - 1;
+    const { data, error, count } = await q.range(from, to);
+    if (error) throw error;
+    return {
+      items: (data || []).map(_toPayment),
+      total: count ?? 0,
+      page, pageSize,
+    };
   }
 
   async function getStudentPayments(studentId) {
@@ -866,8 +949,21 @@ HT.storage = (() => {
     if (error) throw error;
   }
 
+  const ALLOWED_EXTENSIONS = new Set([
+    'pdf','doc','docx','xls','xlsx','ppt','pptx','odt','ods','odp',
+    'jpg','jpeg','png','gif','webp','svg','mp4','mp3','wav','zip',
+    'csv','txt','md','json',
+  ]);
+  const MAX_FILE_MB = 50;
+
   async function uploadMaterialFile(file) {
-    const ext  = file.name.split('.').pop();
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (!ALLOWED_EXTENSIONS.has(ext)) {
+      throw new Error(`Tipo de arquivo não permitido: .${ext}`);
+    }
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      throw new Error(`O arquivo excede o limite de ${MAX_FILE_MB} MB.`);
+    }
     const path = `${crypto.randomUUID()}.${ext}`;
     const { data, error } = await db.storage
       .from(MATERIALS_BUCKET)
@@ -908,11 +1004,55 @@ HT.storage = (() => {
   function seedData() {}
   function clearAll() {}
 
+  /* ====================================================================
+     PENDENTES DE REPOSIÇÃO (faltas justificadas sem reposição registrada)
+     ==================================================================== */
+
+  /**
+   * Retorna alunos com faltas justificadas que ainda não têm reposição.
+   * Reposição = registro com status 'makeup' do MESMO aluno em data >= falta.
+   * (Aproximação: 1 falta justificada → 1 reposição esperada, ordem cronológica.)
+   */
+  async function getPendingMakeups() {
+    const { data, error } = await db.from('attendance')
+      .select('id, student_id, class_id, date, status')
+      .in('status', ['justified', 'makeup'])
+      .order('date', { ascending: true });
+    if (error) throw error;
+
+    /* Agrupa por aluno: contabiliza justified vs makeup, retorna pendentes (justified - makeup > 0) */
+    const byStudent = new Map();
+    for (const r of (data || [])) {
+      if (!byStudent.has(r.student_id)) {
+        byStudent.set(r.student_id, { justified: [], makeup: [] });
+      }
+      byStudent.get(r.student_id)[r.status === 'justified' ? 'justified' : 'makeup'].push(r);
+    }
+
+    const pending = [];
+    for (const [studentId, { justified, makeup }] of byStudent) {
+      const owed = justified.length - makeup.length;
+      if (owed > 0) {
+        pending.push({
+          studentId,
+          owed,
+          oldestUnpaid: justified[justified.length - owed]?.date || justified[0].date,
+          totalJustified: justified.length,
+          totalMakeup:    makeup.length,
+        });
+      }
+    }
+    return pending;
+  }
+
   return {
     getStudents, getStudent, saveStudent, deleteStudent,
+    getStudentsPage,
     getClasses,  getClass,  saveClass,  deleteClass,
     getAttendance, getStudentAttendance, saveAttendance, deleteAttendance,
+    getAttendancePage, getPendingMakeups,
     getPayments, getStudentPayments, savePayment, deletePayment,
+    getPaymentsPage,
     getProfile, saveProfile,
     getTeachers, getTeacher, updateTeacher, deleteTeacher, inviteTeacher,
     setStudentTeachers, setStudentTeacherRate, getStudentTeacherLinks,

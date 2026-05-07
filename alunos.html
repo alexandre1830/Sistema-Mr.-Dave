@@ -38,44 +38,7 @@
     </div>
 
     <nav class="sidebar-nav">
-      <ul class="nav-list" role="list">
-        <li class="nav-item">
-          <a href="dashboard.html" class="nav-link">
-            <i class="fa-solid fa-house nav-icon"></i>
-            <span class="nav-label">Dashboard</span>
-          </a>
-        </li>
-        <li class="nav-item nav-item--active">
-          <a href="alunos.html" class="nav-link">
-            <i class="fa-solid fa-user-graduate nav-icon"></i>
-            <span class="nav-label">Alunos</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="turmas.html" class="nav-link">
-            <i class="fa-solid fa-users nav-icon"></i>
-            <span class="nav-label">Turmas</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="frequencia.html" class="nav-link">
-            <i class="fa-solid fa-calendar-check nav-icon"></i>
-            <span class="nav-label">Frequência</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="progresso.html" class="nav-link">
-            <i class="fa-solid fa-chart-line nav-icon"></i>
-            <span class="nav-label">Progresso</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="financas.html" class="nav-link">
-            <i class="fa-solid fa-dollar-sign nav-icon"></i>
-            <span class="nav-label">Finanças</span>
-          </a>
-        </li>
-      </ul>
+      <ul class="nav-list" role="list"><!-- preenchido por sidebar.js --></ul>
     </nav>
 
     <div class="sidebar-footer">
@@ -257,7 +220,7 @@
         </fieldset>
 
         <!-- Financial Info -->
-        <fieldset class="form-fieldset">
+        <fieldset class="form-fieldset" data-admin-only>
           <legend class="form-legend">
             <i class="fa-solid fa-dollar-sign"></i>
             Mensalidade
@@ -338,7 +301,7 @@
           <i class="fa-solid fa-calendar-check"></i>
           Frequência
         </button>
-        <button class="tab" role="tab" aria-selected="false" aria-controls="tabFinance" id="btnTabFinance">
+        <button class="tab" role="tab" aria-selected="false" aria-controls="tabFinance" id="btnTabFinance" data-admin-only>
           <i class="fa-solid fa-receipt"></i>
           Finanças
         </button>
@@ -389,19 +352,19 @@
               </span>
               <span class="info-value" id="detailLevel">—</span>
             </div>
-            <div class="info-item">
+            <div class="info-item" data-admin-only>
               <span class="info-label">
                 <i class="fa-solid fa-circle-dollar-to-slot"></i> Mensalidade
               </span>
               <span class="info-value" id="detailFee">—</span>
             </div>
-            <div class="info-item">
+            <div class="info-item" data-admin-only>
               <span class="info-label">
                 <i class="fa-regular fa-calendar-plus"></i> Início do contrato
               </span>
               <span class="info-value" id="detailContractStart">—</span>
             </div>
-            <div class="info-item">
+            <div class="info-item" data-admin-only>
               <span class="info-label">
                 <i class="fa-regular fa-calendar-minus"></i> Término do contrato
               </span>
@@ -459,10 +422,20 @@
               </tbody>
             </table>
           </div>
+          <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--gray-100);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn btn--ghost btn--sm" id="printAttendanceBtn">
+              <i class="fa-solid fa-print"></i>
+              Imprimir / PDF
+            </button>
+            <a href="frequencia.html" class="prog-tab-link">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              Abrir página de Frequência
+            </a>
+          </div>
         </div>
 
         <!-- Tab: Finanças -->
-        <div class="tab-panel" id="tabFinance" role="tabpanel" aria-labelledby="btnTabFinance" hidden>
+        <div class="tab-panel" id="tabFinance" role="tabpanel" aria-labelledby="btnTabFinance" hidden data-admin-only>
           <div class="tab-toolbar">
             <div class="finance-summary">
               <div class="fin-stat fin-stat--paid">
@@ -501,6 +474,16 @@
               </tbody>
             </table>
           </div>
+          <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--gray-100);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn btn--ghost btn--sm" id="printFinanceBtn">
+              <i class="fa-solid fa-print"></i>
+              Imprimir / PDF
+            </button>
+            <a href="financas.html" class="prog-tab-link">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i>
+              Abrir página de Finanças
+            </a>
+          </div>
         </div>
 
         <!-- Tab: Progresso -->
@@ -512,7 +495,11 @@
               <p>Carregando...</p>
             </div>
           </div>
-          <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--gray-100);text-align:right">
+          <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--gray-100);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap">
+            <button type="button" class="btn btn--ghost btn--sm" id="printProgressBtn">
+              <i class="fa-solid fa-print"></i>
+              Imprimir / PDF
+            </button>
             <a href="progresso.html" class="prog-tab-link">
               <i class="fa-solid fa-arrow-up-right-from-square"></i>
               Abrir página de Progresso
@@ -551,6 +538,7 @@
   <script src="js/supabase.js" defer></script>
   <script src="js/theme.js" defer></script>
   <script src="js/utils.js" defer></script>
+  <script src="js/errors.js" defer></script>
   <script src="js/auth.js" defer></script>
   <script src="js/storage.js" defer></script>
   <script src="js/sidebar.js" defer></script>

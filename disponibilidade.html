@@ -25,33 +25,6 @@
   <link rel="stylesheet" href="css/mobile.css" />
 
   <style>
-    /* ---- Abas de professor (admin view) ---- */
-    .teacher-tabs {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-      padding: 0 0 16px 0;
-      border-bottom: 2px solid var(--border-color, #e5e7eb);
-      margin-bottom: 20px;
-    }
-    .teacher-tab {
-      padding: 7px 18px;
-      border-radius: 999px;
-      border: 1.5px solid var(--border-color, #e5e7eb);
-      background: transparent;
-      color: var(--text-secondary, #6b7280);
-      font-size: .85rem;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background .15s, color .15s, border-color .15s;
-    }
-    .teacher-tab:hover  { background: var(--bg-hover, #f3f4f6); }
-    .teacher-tab.active {
-      background: var(--color-primary, #032d6f);
-      border-color: var(--color-primary, #032d6f);
-      color: #fff;
-    }
-
     /* ---- Legenda ---- */
     .cal-legend {
       display: flex;
@@ -169,7 +142,7 @@
 
       <!-- Abas de professor — visível apenas para admin -->
       <div id="teacherTabsWrap" style="display:none">
-        <div class="teacher-tabs" id="teacherTabs" role="tablist" aria-label="Professores"></div>
+        <div class="app-tabs" id="teacherTabs" role="tablist" aria-label="Professores"></div>
       </div>
 
       <!-- Toolbar externo: legenda + controles de visualização + zoom -->
@@ -344,6 +317,7 @@
   <script src="js/supabase.js" defer></script>
   <script src="js/theme.js" defer></script>
   <script src="js/utils.js" defer></script>
+  <script src="js/errors.js" defer></script>
   <script src="js/auth.js" defer></script>
   <script src="js/storage.js" defer></script>
   <script src="js/sidebar.js" defer></script>

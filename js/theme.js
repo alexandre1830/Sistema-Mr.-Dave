@@ -28,6 +28,7 @@ HT.theme = (() => {
 
   /* ====== Painel de configurações ====== */
   let _panelOpen = false;
+  let _resizeHandler = null;
 
   function _buildPanel() {
     const existing = document.getElementById('settingsPanel');
@@ -134,9 +135,8 @@ HT.theme = (() => {
     _panelOpen = true;
     setTimeout(() => {
       document.addEventListener('click', _outsideClick);
-      window.addEventListener('resize', () => _position(
-        document.getElementById('settingsPanel')
-      ));
+      _resizeHandler = () => _position(document.getElementById('settingsPanel'));
+      window.addEventListener('resize', _resizeHandler);
     }, 50);
   }
 
@@ -147,6 +147,10 @@ HT.theme = (() => {
     panel.setAttribute('aria-hidden', 'true');
     _panelOpen = false;
     document.removeEventListener('click', _outsideClick);
+    if (_resizeHandler) {
+      window.removeEventListener('resize', _resizeHandler);
+      _resizeHandler = null;
+    }
   }
 
   function _outsideClick(e) {

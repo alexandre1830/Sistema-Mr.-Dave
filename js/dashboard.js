@@ -151,10 +151,51 @@ document.addEventListener('DOMContentLoaded', async () => {
     }).join('');
   }
 
+  /* ---------- Pendentes de reposição ---------- */
+  async function loadPendingMakeups() {
+    const section = document.getElementById('pendingMakeupsSection');
+    const list    = document.getElementById('pendingMakeupsList');
+    if (!section || !list) return;
+
+    try {
+      const pending = await storage.getPendingMakeups();
+      if (!pending.length) { section.hidden = true; return; }
+
+      const studentMap = Object.fromEntries(students.map(s => [s.id, s]));
+      const items = pending
+        .map(p => ({ ...p, student: studentMap[p.studentId] }))
+        .filter(p => p.student)
+        .sort((a, b) => a.oldestUnpaid.localeCompare(b.oldestUnpaid))
+        .slice(0, 8);
+
+      if (!items.length) { section.hidden = true; return; }
+
+      list.innerHTML = items.map(p => `
+        <div class="upcoming-item">
+          <div class="upcoming-time" style="color:var(--color-warning)">
+            <i class="fa-solid fa-rotate-right"></i><br>
+            <strong style="font-size:1.1rem">${p.owed}</strong>
+          </div>
+          <div class="upcoming-info">
+            <div class="upcoming-name">${utils.escapeHTML(p.student.name)}</div>
+            <div class="upcoming-class">Falta justificada desde ${utils.formatDate(p.oldestUnpaid)}</div>
+          </div>
+          <span class="upcoming-badge" style="background:rgba(180,83,9,.12);color:#b45309">
+            ${p.owed} ${p.owed === 1 ? 'pendente' : 'pendentes'}
+          </span>
+        </div>`).join('');
+      section.hidden = false;
+    } catch (err) {
+      console.error('Erro ao carregar pendentes de reposição:', err);
+      section.hidden = true;
+    }
+  }
+
   /* ---------- Init ---------- */
   loadStats();
   await Promise.all([
     calendar.init('calendar'),
     loadUpcoming(),
+    loadPendingMakeups(),
   ]);
 });

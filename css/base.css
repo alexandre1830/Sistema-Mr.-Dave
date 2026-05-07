@@ -1460,6 +1460,38 @@ h1,h2,h3,h4,h5,h6 { font-weight: 600; line-height: 1.3; }
   border-color: var(--gray-300);
 }
 
+/* Sistema genérico de abas (Finanças, Progresso, Disponibilidade…) */
+.app-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--gray-200);
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+.app-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: .9rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color .15s, border-color .15s, background .15s;
+  border-radius: var(--radius-base) var(--radius-base) 0 0;
+  white-space: nowrap;
+}
+.app-tab:hover { color: var(--text-primary); background: var(--gray-50); }
+.app-tab--active {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+.app-tab--active:hover { background: transparent; }
+
 /* Color swatches in folder modal */
 .color-swatches { display: flex; gap: 8px; flex-wrap: wrap; padding: 4px 0; }
 
@@ -1778,6 +1810,7 @@ h1,h2,h3,h4,h5,h6 { font-weight: 600; line-height: 1.3; }
   display: flex;
   align-items: center;
   gap: 8px;
+  margin: 0;
 }
 
 .section-title-icon { color: var(--color-primary); font-size: .9rem; }
@@ -2420,8 +2453,9 @@ h1,h2,h3,h4,h5,h6 { font-weight: 600; line-height: 1.3; }
 .payments-section { animation: slideUp .5s .15s both; }
 #teacherFinanceView .payments-section .section-header { margin-top: 24px; margin-bottom: 8px;}
 
-/* Section header inside payments has no bottom margin — toolbar handles spacing */
+/* Section header inside payments: no bottom margin when toolbar follows; small gap otherwise */
 .payments-section .section-header { margin-bottom: 0; }
+#pagamentosPanel .payments-section .section-header { margin-bottom: 12px; }
 
 .payments-toolbar {
   display: flex;

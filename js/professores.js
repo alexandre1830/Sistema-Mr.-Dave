@@ -99,9 +99,7 @@ HT.professores = (() => {
   function initials(s) {
     return (s || '?').trim().split(/\s+/).slice(0,2).map(p => p[0]).join('').toUpperCase();
   }
-  function escapeHTML(s) {
-    return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
+  const escapeHTML = s => HT.utils.escapeHTML(s);
   function formatBR(n) { return Number(n).toFixed(2).replace('.', ','); }
 
   function applyFilter() {
@@ -291,7 +289,11 @@ HT.professores = (() => {
   async function onDelete() {
     const id = idInp().value;
     if (!id) return;
-    if (!confirm('Excluir este professor? Os vínculos com alunos serão removidos. A conta de login só será removida pelo painel do Supabase.')) return;
+    const ok = await HT.modals.confirm(
+      'Excluir este professor? Os vínculos com alunos serão removidos. A conta de login só será removida pelo painel do Supabase.',
+      { okLabel: 'Excluir' }
+    );
+    if (!ok) return;
     try {
       await HT.storage.deleteTeacher(id);
       await load();

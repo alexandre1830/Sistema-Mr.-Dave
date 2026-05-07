@@ -58,10 +58,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   /* ====== Alternância de view ====== */
-  document.querySelectorAll('.prog-view-tab').forEach(btn => {
+  document.querySelectorAll('#viewStudentsBtn, #viewCurriculumBtn').forEach(btn => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.prog-view-tab').forEach(b => b.classList.remove('prog-view-tab--active'));
-      btn.classList.add('prog-view-tab--active');
+      document.querySelectorAll('#viewStudentsBtn, #viewCurriculumBtn').forEach(b => {
+        b.classList.remove('app-tab--active');
+        b.setAttribute('aria-selected', 'false');
+      });
+      btn.classList.add('app-tab--active');
+      btn.setAttribute('aria-selected', 'true');
       const isStudents = btn.dataset.view === 'students';
       document.getElementById('studentsView').style.display    = isStudents ? '' : 'none';
       document.getElementById('curriculumView').style.display  = isStudents ? 'none' : '';
@@ -604,7 +608,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       modals.close('categoryModalOverlay');
       renderCurriculum();
       utils.showToast(id ? 'Categoria atualizada!' : 'Categoria criada!', 'success');
-    } catch { utils.showToast('Erro ao salvar categoria.', 'error'); }
+    } catch (err) { console.error(err); utils.showToast('Erro ao salvar categoria.', 'error'); }
     finally { if (btn) btn.classList.remove('is-loading'); }
   });
 
@@ -651,7 +655,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       modals.close('contentModalOverlay');
       renderCurriculum();
       utils.showToast(id ? 'Conteúdo atualizado!' : 'Conteúdo adicionado!', 'success');
-    } catch { utils.showToast('Erro ao salvar conteúdo.', 'error'); }
+    } catch (err) { console.error(err); utils.showToast('Erro ao salvar conteúdo.', 'error'); }
     finally { if (btn) btn.classList.remove('is-loading'); }
   });
 

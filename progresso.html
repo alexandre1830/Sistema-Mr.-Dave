@@ -31,14 +31,7 @@
       </button>
     </div>
     <nav class="sidebar-nav">
-      <ul class="nav-list" role="list">
-        <li class="nav-item"><a href="dashboard.html" class="nav-link"><i class="fa-solid fa-house nav-icon"></i><span class="nav-label">Dashboard</span></a></li>
-        <li class="nav-item"><a href="alunos.html" class="nav-link"><i class="fa-solid fa-user-graduate nav-icon"></i><span class="nav-label">Alunos</span></a></li>
-        <li class="nav-item"><a href="turmas.html" class="nav-link"><i class="fa-solid fa-users nav-icon"></i><span class="nav-label">Turmas</span></a></li>
-        <li class="nav-item"><a href="frequencia.html" class="nav-link"><i class="fa-solid fa-calendar-check nav-icon"></i><span class="nav-label">Frequência</span></a></li>
-        <li class="nav-item nav-item--active"><a href="progresso.html" class="nav-link"><i class="fa-solid fa-chart-line nav-icon"></i><span class="nav-label">Progresso</span></a></li>
-        <li class="nav-item"><a href="financas.html" class="nav-link"><i class="fa-solid fa-dollar-sign nav-icon"></i><span class="nav-label">Finanças</span></a></li>
-      </ul>
+      <ul class="nav-list" role="list"><!-- preenchido por sidebar.js --></ul>
     </nav>
     <div class="sidebar-footer">
       <button class="user-info" id="openProfileBtn" aria-label="Editar perfil">
@@ -56,19 +49,22 @@
     <header class="topbar">
       <button class="sidebar-toggle" id="sidebarToggle" aria-label="Abrir menu"><i class="fa-solid fa-bars"></i></button>
       <div class="topbar-title"><h2>Progresso</h2></div>
-      <div class="topbar-actions">
-        <div class="prog-view-tabs" role="group" aria-label="Visualização">
-          <button class="prog-view-tab prog-view-tab--active" data-view="students" id="viewStudentsBtn">
-            <i class="fa-solid fa-users"></i><span>Alunos</span>
-          </button>
-          <button class="prog-view-tab" data-view="curriculum" id="viewCurriculumBtn">
-            <i class="fa-solid fa-book-open"></i><span>Currículo</span>
-          </button>
-        </div>
-      </div>
+      <div class="topbar-actions"></div>
     </header>
 
     <main class="page-content" id="mainContent">
+
+      <!-- Tabs: Alunos / Currículo -->
+      <div class="app-tabs" role="tablist" aria-label="Visualização">
+        <button class="app-tab app-tab--active" data-view="students" id="viewStudentsBtn"
+                role="tab" aria-selected="true" aria-controls="studentsView">
+          <i class="fa-solid fa-users"></i><span>Alunos</span>
+        </button>
+        <button class="app-tab" data-view="curriculum" id="viewCurriculumBtn"
+                role="tab" aria-selected="false" aria-controls="curriculumView">
+          <i class="fa-solid fa-book-open"></i><span>Currículo</span>
+        </button>
+      </div>
 
       <!-- ===== VIEW: Alunos ===== -->
       <div id="studentsView">
@@ -256,6 +252,7 @@
   <script src="js/supabase.js" defer></script>
   <script src="js/theme.js" defer></script>
   <script src="js/utils.js" defer></script>
+  <script src="js/errors.js" defer></script>
   <script src="js/auth.js" defer></script>
   <script src="js/storage.js" defer></script>
   <script src="js/sidebar.js" defer></script>

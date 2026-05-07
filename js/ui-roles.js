@@ -17,7 +17,6 @@ HT.uiRoles = (() => {
     'addClassBtn',  'addFirstClassBtn',
     'editClassBtn', 'deleteClassBtn',
     'addPaymentBtn','addFirstPaymentBtn',
-    'btnTabFinance', /* aba financeira do aluno (mensalidade) */
   ];
 
   async function apply() {
@@ -36,10 +35,7 @@ HT.uiRoles = (() => {
     }
   }
 
-  document.addEventListener('DOMContentLoaded', () => {
-    /* aguarda auth.js inicializar role cache */
-    setTimeout(apply, 0);
-  });
+  document.addEventListener('DOMContentLoaded', () => { apply(); });
 
   return { apply };
 })();

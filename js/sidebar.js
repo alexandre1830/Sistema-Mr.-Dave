@@ -56,17 +56,18 @@ HT.sidebar = (() => {
 
     function open() {
       sidebar.classList.add('is-open');
-      overlay.classList.add('is-visible');
-      overlay.style.display = 'block';
+      if (overlay) { overlay.classList.add('is-visible'); overlay.style.display = 'block'; }
       document.body.classList.add('sidebar-open');
     }
     function close() {
       sidebar.classList.remove('is-open');
-      overlay.classList.remove('is-visible');
+      if (overlay) {
+        overlay.classList.remove('is-visible');
+        setTimeout(() => {
+          if (!sidebar.classList.contains('is-open')) overlay.style.display = '';
+        }, 300);
+      }
       document.body.classList.remove('sidebar-open');
-      setTimeout(() => {
-        if (!sidebar.classList.contains('is-open')) overlay.style.display = '';
-      }, 300);
     }
 
     toggle?.addEventListener('click',  open);

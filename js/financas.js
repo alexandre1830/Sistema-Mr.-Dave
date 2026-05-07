@@ -503,6 +503,129 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   document.getElementById('addPaymentBtn')?.addEventListener('click', () => openPaymentForm());
+
+  /* ====== Export PDF (relatório financeiro do mês) ====== */
+  document.getElementById('exportFinancesBtn')?.addEventListener('click', () => {
+    const valid    = activeStudentIds();
+    const payments = allPayments
+      .filter(p => p.reference === currentMonth && valid.has(p.studentId));
+
+    if (!payments.length) {
+      utils.showToast('Sem pagamentos no mês para exportar.', 'warning');
+      return;
+    }
+
+    const esc = utils.escapeHTML;
+    const STATUS_BADGE = {
+      paid:      '<span class="badge badge-paid">Pago</span>',
+      pending:   '<span class="badge badge-pending">Pendente</span>',
+      overdue:   '<span class="badge badge-overdue">Em atraso</span>',
+      cancelled: '<span class="badge badge-cancelled">Cancelado</span>',
+    };
+
+    /* Totais */
+    const totalAll     = payments.reduce((s, p) => s + Number(p.amount), 0);
+    const totalPaid    = payments.filter(p => p.status === 'paid')   .reduce((s, p) => s + Number(p.amount), 0);
+    const totalPending = payments.filter(p => p.status === 'pending').reduce((s, p) => s + Number(p.amount), 0);
+    const totalOverdue = payments.filter(p => p.status === 'overdue').reduce((s, p) => s + Number(p.amount), 0);
+
+    /* Ordenar por nome do aluno */
+    const sorted = [...payments].sort((a, b) => {
+      const an = findStudent(a.studentId)?.name || '';
+      const bn = findStudent(b.studentId)?.name || '';
+      return an.localeCompare(bn, 'pt-BR');
+    });
+
+    const summaryHTML = `
+      <div class="summary">
+        <div class="summary-item"><span class="summary-label">Total registrado</span><span class="summary-value">${utils.formatCurrency(totalAll)}</span></div>
+        <div class="summary-item"><span class="summary-label">Recebido</span><span class="summary-value" style="color:#15803d">${utils.formatCurrency(totalPaid)}</span></div>
+        <div class="summary-item"><span class="summary-label">Pendente</span><span class="summary-value" style="color:#b45309">${utils.formatCurrency(totalPending)}</span></div>
+        <div class="summary-item"><span class="summary-label">Em atraso</span><span class="summary-value" style="color:#dc2626">${utils.formatCurrency(totalOverdue)}</span></div>
+      </div>`;
+
+    const bodyHTML = `<table>
+      <thead>
+        <tr>
+          <th>Aluno</th>
+          <th>Valor</th>
+          <th>Vencimento</th>
+          <th>Status</th>
+          <th>Pago em</th>
+          <th>Método</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${sorted.map(p => {
+          const s = findStudent(p.studentId);
+          return `<tr>
+            <td>${esc(s?.name || '—')}</td>
+            <td style="white-space:nowrap;font-weight:600">${utils.formatCurrency(p.amount)}</td>
+            <td style="white-space:nowrap;color:#4b5563">${p.dueDate ? utils.formatDate(p.dueDate) : '—'}</td>
+            <td>${STATUS_BADGE[p.status] || esc(p.status)}</td>
+            <td style="white-space:nowrap;color:#4b5563">${p.paidDate ? utils.formatDate(p.paidDate) : '—'}</td>
+            <td style="color:#4b5563">${esc(utils.formatMethod(p.method))}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+      <tfoot>
+        <tr style="background:#f9fafb;font-weight:700">
+          <td>Total — ${esc(utils.formatMonthYear(currentMonth))}</td>
+          <td style="white-space:nowrap">${utils.formatCurrency(totalAll)}</td>
+          <td colspan="4"></td>
+        </tr>
+      </tfoot>
+    </table>`;
+
+    const today = new Date().toLocaleDateString('pt-BR', { day:'2-digit', month:'long', year:'numeric' });
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head>
+      <meta charset="utf-8">
+      <title>Relatório Financeiro — ${esc(utils.formatMonthYear(currentMonth))}</title>
+      <style>
+        @page { margin: 16mm; }
+        body { font-family: 'Inter', system-ui, sans-serif; color:#1f2937; line-height:1.5 }
+        table { width:100%;border-collapse:collapse;font-size:.9rem }
+        th, td { padding:6px 8px;text-align:left;border-bottom:1px solid #e5e7eb }
+        th { background:#f3f4f6;font-weight:600;font-size:.8rem;text-transform:uppercase;letter-spacing:.04em;color:#4b5563 }
+        h1 { color:#032d6f;margin:0 0 4px 0 }
+        .header { border-bottom:3px solid #032d6f;padding-bottom:12px;margin-bottom:16px }
+        .meta { display:flex;gap:24px;color:#4b5563;font-size:.9rem;flex-wrap:wrap }
+        .summary { display:flex;gap:24px;margin:12px 0 20px;padding:12px 16px;background:#f9fafb;border-radius:8px;flex-wrap:wrap }
+        .summary-item { display:flex;flex-direction:column;gap:2px }
+        .summary-label { font-size:.75rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em }
+        .summary-value { font-size:1.15rem;font-weight:700;color:#1f2937 }
+        .badge { display:inline-block;padding:2px 8px;border-radius:4px;font-size:.78rem;font-weight:600 }
+        .badge-paid     { background:#dcfce7;color:#15803d }
+        .badge-pending  { background:#fef3c7;color:#b45309 }
+        .badge-overdue  { background:#fee2e2;color:#dc2626 }
+        .badge-cancelled{ background:#e5e7eb;color:#4b5563 }
+        .footer { margin-top:32px;padding-top:8px;border-top:1px solid #e5e7eb;font-size:.75rem;color:#9ca3af;text-align:center }
+        @media print { .no-print { display:none } }
+      </style>
+    </head><body>
+      <div class="header">
+        <h1>Relatório Financeiro</h1>
+        <div class="meta">
+          <div><strong>Período:</strong> ${esc(utils.formatMonthYear(currentMonth))}</div>
+          <div><strong>Pagamentos:</strong> ${payments.length}</div>
+          <div><strong>Emitido em:</strong> ${today}</div>
+        </div>
+      </div>
+      ${summaryHTML}
+      ${bodyHTML}
+      <div class="footer">Hey, Teacher! — relatório gerado automaticamente</div>
+      <script>setTimeout(() => window.print(), 250);<\/script>
+    </body></html>`;
+
+    const w = window.open('', '_blank');
+    if (!w) {
+      utils.showToast('Bloqueador de pop-ups impediu a impressão.', 'warning');
+      return;
+    }
+    w.document.write(html);
+    w.document.close();
+  });
+
   document.getElementById('paymentModalCancel')?.addEventListener('click', () => modals.close('paymentModalOverlay'));
   document.getElementById('paymentModalClose')?.addEventListener('click', () => modals.close('paymentModalOverlay'));
 
@@ -585,6 +708,101 @@ document.addEventListener('DOMContentLoaded', async () => {
     modals.close('deleteConfirmOverlay');
     pendingDeleteId = null;
   });
+
+  /* ====================================================================
+     ABAS: Receitas / Pagamentos (salários a professores)
+     ==================================================================== */
+  let activeTab = 'receitas';   // 'receitas' | 'pagamentos'
+  let payoutsLoaded = false;    // só busca uma vez por troca de mês
+
+  const escapeHTML = s => HT.utils.escapeHTML(s);
+
+  /* 'YYYY-MM' → { from: 'YYYY-MM-01', to: 'YYYY-MM-DD' (último dia) } */
+  function monthToBounds(monthStr) {
+    const [y, m] = monthStr.split('-').map(Number);
+    const lastDay = new Date(y, m, 0).getDate();
+    const mm = String(m).padStart(2, '0');
+    return { from: `${y}-${mm}-01`, to: `${y}-${mm}-${String(lastDay).padStart(2,'0')}` };
+  }
+
+  async function renderPayoutsAdmin() {
+    const { from, to } = monthToBounds(currentMonth);
+    const tbody = document.getElementById('payoutsTableBody');
+
+    /* loading */
+    tbody.innerHTML = `<tr class="empty-row"><td colspan="5">
+      <div class="empty-state empty-state--sm"><p>Carregando…</p></div></td></tr>`;
+
+    try {
+      const data = await HT.payouts.getAllTeachersPayout({ from, to });
+
+      utils.setTextContent('payoutsTotalMonth',       utils.formatCurrency(data.grandTotal));
+      utils.setTextContent('payoutsTeacherCount',     data.teacherCount);
+      utils.setTextContent('payoutsPaidLessons',      data.paidLessons);
+      utils.setTextContent('payoutsJustifiedLessons', data.justifiedLessons);
+      utils.setTextContent('payoutsTotalLessons',     data.totalLessons);
+
+      /* ordena: maior payout primeiro, depois por nome */
+      const rows = [...data.byTeacher].sort((a, b) =>
+        b.total - a.total || a.teacherName.localeCompare(b.teacherName, 'pt-BR'));
+
+      if (!rows.length) {
+        tbody.innerHTML = `<tr class="empty-row"><td colspan="5">
+          <div class="empty-state empty-state--sm"><p>Nenhum professor cadastrado.</p></div></td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = rows.map(t => `
+        <tr>
+          <td>${escapeHTML(t.teacherName)}</td>
+          <td>${t.paidCount}</td>
+          <td>${t.justifiedCount}</td>
+          <td>${t.totalCount}</td>
+          <td><strong>${utils.formatCurrency(t.total)}</strong></td>
+        </tr>`).join('');
+
+      payoutsLoaded = true;
+    } catch (err) {
+      console.error('Erro ao carregar payouts admin:', err);
+      tbody.innerHTML = `<tr class="empty-row"><td colspan="5">
+        <div class="empty-state empty-state--sm">
+          <p>Erro ao carregar dados: ${escapeHTML(err.message || '')}</p>
+        </div></td></tr>`;
+    }
+  }
+
+  function showTab(tab) {
+    activeTab = tab;
+    const isReceitas = tab === 'receitas';
+
+    document.getElementById('tabReceitas').classList.toggle('app-tab--active', isReceitas);
+    document.getElementById('tabReceitas').setAttribute('aria-selected', String(isReceitas));
+    document.getElementById('tabPagamentos').classList.toggle('app-tab--active', !isReceitas);
+    document.getElementById('tabPagamentos').setAttribute('aria-selected', String(!isReceitas));
+
+    document.getElementById('receitasPanel').hidden   = !isReceitas;
+    document.getElementById('pagamentosPanel').hidden =  isReceitas;
+
+    /* Botão "Novo Pagamento" só faz sentido na aba Receitas */
+    const addBtn = document.getElementById('addPaymentBtn');
+    if (addBtn) addBtn.style.display = isReceitas ? '' : 'none';
+
+    if (!isReceitas && !payoutsLoaded) {
+      renderPayoutsAdmin();
+    }
+  }
+
+  document.getElementById('tabReceitas')?.addEventListener('click',  () => showTab('receitas'));
+  document.getElementById('tabPagamentos')?.addEventListener('click', () => showTab('pagamentos'));
+
+  /* Quando o mês muda, invalida o cache de payouts e recarrega se a aba estiver ativa.
+     Esses listeners rodam DEPOIS dos handlers originais (que chamam setPeriod). */
+  function onMonthChange() {
+    payoutsLoaded = false;
+    if (activeTab === 'pagamentos') renderPayoutsAdmin();
+  }
+  document.getElementById('prevMonthBtn')?.addEventListener('click', onMonthChange);
+  document.getElementById('nextMonthBtn')?.addEventListener('click', onMonthChange);
 
   /* ====== Init ====== */
   await load();

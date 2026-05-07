@@ -286,7 +286,9 @@ HT.disponibilidade = (() => {
 
   async function onDelete() {
     const id = $('availId').value;
-    if (!id || !confirm('Excluir este horário?')) return;
+    if (!id) return;
+    const ok = await HT.modals.confirm('Excluir este horário?', { okLabel: 'Excluir' });
+    if (!ok) return;
     try {
       await HT.storage.deleteAvailability(id);
       HT.modals.close('availModalOverlay');
@@ -322,19 +324,19 @@ HT.disponibilidade = (() => {
     wrap.style.display = '';
 
     tabs.innerHTML = teachers.map(t => `
-      <button class="teacher-tab${activeTeacherId === t.id ? ' active' : ''}"
+      <button class="app-tab${activeTeacherId === t.id ? ' app-tab--active' : ''}"
               data-teacher-id="${t.id}" role="tab"
               aria-selected="${activeTeacherId === t.id}">
         ${escapeHTML(t.name || t.email)}
       </button>
     `).join('');
 
-    tabs.querySelectorAll('.teacher-tab').forEach(btn => {
+    tabs.querySelectorAll('.app-tab').forEach(btn => {
       btn.addEventListener('click', async () => {
         activeTeacherId      = btn.dataset.teacherId;
         isAdminViewingTeacher = true;
-        tabs.querySelectorAll('.teacher-tab').forEach(b => {
-          b.classList.toggle('active', b === btn);
+        tabs.querySelectorAll('.app-tab').forEach(b => {
+          b.classList.toggle('app-tab--active', b === btn);
           b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
         });
         await refreshCalendar();
@@ -342,10 +344,7 @@ HT.disponibilidade = (() => {
     });
   }
 
-  function escapeHTML(s) {
-    return String(s ?? '').replace(/[&<>"']/g,
-      c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
+  const escapeHTML = s => HT.utils.escapeHTML(s);
 
   /* ====================================================================
      INICIALIZAÇÃO DO FULLCALENDAR

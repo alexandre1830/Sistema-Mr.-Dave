@@ -43,44 +43,7 @@
     </div>
 
     <nav class="sidebar-nav">
-      <ul class="nav-list" role="list">
-        <li class="nav-item nav-item--active">
-          <a href="dashboard.html" class="nav-link">
-            <i class="fa-solid fa-house nav-icon"></i>
-            <span class="nav-label">Dashboard</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="alunos.html" class="nav-link">
-            <i class="fa-solid fa-user-graduate nav-icon"></i>
-            <span class="nav-label">Alunos</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="turmas.html" class="nav-link">
-            <i class="fa-solid fa-users nav-icon"></i>
-            <span class="nav-label">Turmas</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="frequencia.html" class="nav-link">
-            <i class="fa-solid fa-calendar-check nav-icon"></i>
-            <span class="nav-label">Frequência</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="progresso.html" class="nav-link">
-            <i class="fa-solid fa-chart-line nav-icon"></i>
-            <span class="nav-label">Progresso</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="financas.html" class="nav-link">
-            <i class="fa-solid fa-dollar-sign nav-icon"></i>
-            <span class="nav-label">Finanças</span>
-          </a>
-        </li>
-      </ul>
+      <ul class="nav-list" role="list"><!-- preenchido por sidebar.js --></ul>
     </nav>
 
     <div class="sidebar-footer">
@@ -201,6 +164,18 @@
         </div>
       </section>
 
+      <!-- Pending Makeups -->
+      <section class="upcoming-section" aria-label="Aulas pendentes de reposição" id="pendingMakeupsSection" hidden>
+        <div class="section-header">
+          <h3 class="section-title">
+            <i class="fa-solid fa-rotate-right section-title-icon"></i>
+            Pendentes de Reposição
+          </h3>
+          <a href="frequencia.html" class="text-small" style="color:var(--color-primary);text-decoration:none">Registrar reposição →</a>
+        </div>
+        <div class="upcoming-list" id="pendingMakeupsList"><!-- Populated by JS --></div>
+      </section>
+
     </main>
   </div>
 
@@ -213,6 +188,7 @@
   <script src="js/supabase.js" defer></script>
   <script src="js/theme.js" defer></script>
   <script src="js/utils.js" defer></script>
+  <script src="js/errors.js" defer></script>
   <script src="js/auth.js" defer></script>
   <script src="js/storage.js" defer></script>
   <script src="js/sidebar.js" defer></script>

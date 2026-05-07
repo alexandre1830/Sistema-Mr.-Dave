@@ -767,7 +767,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const header = ['Data', 'Aluno', 'Turma', 'Status', 'Conteúdo Ministrado', 'Observações'];
-    const statusLabel = { present: 'Presente', absent: 'Falta', justified: 'Justificada' };
+    const statusLabel = { present: 'Presente', absent: 'Falta', justified: 'Justificada', makeup: 'Reposição' };
 
     const rows = filtered.map(r => {
       const student = findStudent(r.studentId);

@@ -41,44 +41,7 @@
     </div>
 
     <nav class="sidebar-nav">
-      <ul class="nav-list" role="list">
-        <li class="nav-item">
-          <a href="dashboard.html" class="nav-link">
-            <i class="fa-solid fa-house nav-icon"></i>
-            <span class="nav-label">Dashboard</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="alunos.html" class="nav-link">
-            <i class="fa-solid fa-user-graduate nav-icon"></i>
-            <span class="nav-label">Alunos</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="turmas.html" class="nav-link">
-            <i class="fa-solid fa-users nav-icon"></i>
-            <span class="nav-label">Turmas</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="frequencia.html" class="nav-link">
-            <i class="fa-solid fa-calendar-check nav-icon"></i>
-            <span class="nav-label">Frequência</span>
-          </a>
-        </li>
-        <li class="nav-item">
-          <a href="progresso.html" class="nav-link">
-            <i class="fa-solid fa-chart-line nav-icon"></i>
-            <span class="nav-label">Progresso</span>
-          </a>
-        </li>
-        <li class="nav-item nav-item--active">
-          <a href="financas.html" class="nav-link">
-            <i class="fa-solid fa-dollar-sign nav-icon"></i>
-            <span class="nav-label">Finanças</span>
-          </a>
-        </li>
-      </ul>
+      <ul class="nav-list" role="list"><!-- preenchido por sidebar.js --></ul>
     </nav>
 
     <div class="sidebar-footer">
@@ -161,15 +124,15 @@
           </div>
         </section>
 
-        <section class="payments-section" aria-label="Detalhamento por aluno">
+        <section class="payments-section" aria-label="Detalhamento por turma">
           <div class="section-header">
-            <h3 class="section-title"><i class="fa-solid fa-user-graduate section-title-icon"></i> Por aluno</h3>
+            <h3 class="section-title"><i class="fa-solid fa-chalkboard section-title-icon"></i> Por turma / Aula</h3>
           </div>
           <div class="table-card">
             <div class="table-wrapper">
               <table class="data-table">
                 <thead>
-                  <tr><th>Aluno</th><th>Aulas pagas</th><th>Total</th></tr>
+                  <tr><th>Turma / Aluno</th><th>Sessões pagas</th><th>Total</th></tr>
                 </thead>
                 <tbody id="payoutByStudentBody">
                   <tr class="empty-row"><td colspan="3"><div class="empty-state empty-state--sm"><p>Sem aulas no período.</p></div></td></tr>
@@ -187,7 +150,7 @@
             <div class="table-wrapper">
               <table class="data-table">
                 <thead>
-                  <tr><th>Data</th><th>Aluno</th><th>Status</th><th>Valor</th></tr>
+                  <tr><th>Data</th><th>Turma / Aluno</th><th>Status</th><th>Valor</th></tr>
                 </thead>
                 <tbody id="payoutItemsBody"></tbody>
               </table>
@@ -200,6 +163,21 @@
       <!-- VIEW DO ADMIN (mensalidades da escola) — original      -->
       <!-- ====================================================== -->
       <div id="adminFinanceView" data-admin-only>
+
+        <!-- Tabs: Receitas / Pagamentos -->
+        <div class="app-tabs" role="tablist" aria-label="Visões de finanças">
+          <button class="app-tab app-tab--active" id="tabReceitas"
+                  role="tab" aria-selected="true" aria-controls="receitasPanel">
+            <i class="fa-solid fa-arrow-trend-up"></i> Receitas
+          </button>
+          <button class="app-tab" id="tabPagamentos"
+                  role="tab" aria-selected="false" aria-controls="pagamentosPanel">
+            <i class="fa-solid fa-hand-holding-dollar"></i> Pagamentos
+          </button>
+        </div>
+
+        <!-- ====================== PAINEL RECEITAS ====================== -->
+        <div id="receitasPanel" role="tabpanel" aria-labelledby="tabReceitas">
 
       <!-- ===== SECTION 1: Financial Summary ===== -->
       <!-- Grid unificado: 4 colunas para cards + gráficos alinhados -->
@@ -313,13 +291,19 @@
               <option value="overdue">Em atraso</option>
             </select>
           </div>
-          <div class="table-view-toggle" role="group" aria-label="Modo de visualização">
-            <button class="view-toggle-btn view-toggle-btn--active" id="viewCards" aria-pressed="true" title="Visualização em cards">
-              <i class="fa-solid fa-table-cells"></i>
+          <div style="display:flex;align-items:center;gap:8px;grid-column:-2/-1;justify-self:end">
+            <button class="btn btn--ghost" id="exportFinancesBtn" title="Exportar mês atual em PDF" style="height:40px;padding:0 14px">
+              <i class="fa-solid fa-file-pdf"></i>
+              <span>Exportar PDF</span>
             </button>
-            <button class="view-toggle-btn" id="viewTable" aria-pressed="false" title="Visualização em tabela">
-              <i class="fa-solid fa-table-list"></i>
-            </button>
+            <div class="table-view-toggle" role="group" aria-label="Modo de visualização">
+              <button class="view-toggle-btn view-toggle-btn--active" id="viewCards" aria-pressed="true" title="Visualização em cards">
+                <i class="fa-solid fa-table-cells"></i>
+              </button>
+              <button class="view-toggle-btn" id="viewTable" aria-pressed="false" title="Visualização em tabela">
+                <i class="fa-solid fa-table-list"></i>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -392,6 +376,92 @@
         </div>
 
       </section>
+
+        </div><!-- /#receitasPanel -->
+
+        <!-- ====================== PAINEL PAGAMENTOS ====================== -->
+        <div id="pagamentosPanel" role="tabpanel" aria-labelledby="tabPagamentos" hidden>
+
+          <section class="finance-summary-section" aria-label="Resumo de pagamentos a professores">
+            <div class="stat-card stat-card--finance-main">
+              <div class="stat-icon">
+                <i class="fa-solid fa-hand-holding-dollar"></i>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Total a Pagar no Mês</span>
+                <span class="stat-value stat-value--lg" id="payoutsTotalMonth">R$ 0,00</span>
+                <span class="stat-trend">
+                  <span id="payoutsTeacherCount">0</span> professor(es)
+                </span>
+              </div>
+            </div>
+
+            <div class="stat-card stat-card--paid">
+              <div class="stat-icon">
+                <i class="fa-solid fa-circle-check"></i>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Aulas Pagas</span>
+                <span class="stat-value" id="payoutsPaidLessons">0</span>
+              </div>
+            </div>
+
+            <div class="stat-card stat-card--pending">
+              <div class="stat-icon">
+                <i class="fa-regular fa-circle-xmark"></i>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Justificadas (não pagas)</span>
+                <span class="stat-value" id="payoutsJustifiedLessons">0</span>
+              </div>
+            </div>
+
+            <div class="stat-card stat-card--overdue">
+              <div class="stat-icon">
+                <i class="fa-solid fa-list-check"></i>
+              </div>
+              <div class="stat-body">
+                <span class="stat-label">Total de Aulas</span>
+                <span class="stat-value" id="payoutsTotalLessons">0</span>
+              </div>
+            </div>
+          </section>
+
+          <section class="payments-section" aria-label="Salários por professor">
+            <div class="section-header">
+              <h3 class="section-title">
+                <i class="fa-solid fa-chalkboard-user section-title-icon"></i>
+                Salários por Professor
+              </h3>
+            </div>
+
+            <div class="table-card">
+              <div class="table-wrapper">
+                <table class="data-table" aria-label="Tabela de salários por professor">
+                  <thead>
+                    <tr>
+                      <th scope="col">Professor</th>
+                      <th scope="col">Aulas pagas</th>
+                      <th scope="col">Justificadas</th>
+                      <th scope="col">Total de aulas</th>
+                      <th scope="col">A receber</th>
+                    </tr>
+                  </thead>
+                  <tbody id="payoutsTableBody">
+                    <tr class="empty-row">
+                      <td colspan="5">
+                        <div class="empty-state empty-state--sm">
+                          <p>Sem dados no período.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </section>
+
+        </div><!-- /#pagamentosPanel -->
 
       </div><!-- /#adminFinanceView -->
 
@@ -534,6 +604,7 @@
   <script src="js/supabase.js" defer></script>
   <script src="js/theme.js" defer></script>
   <script src="js/utils.js" defer></script>
+  <script src="js/errors.js" defer></script>
   <script src="js/auth.js" defer></script>
   <script src="js/storage.js" defer></script>
   <script src="js/sidebar.js" defer></script>

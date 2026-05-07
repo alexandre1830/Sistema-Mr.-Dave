@@ -18,3 +18,6 @@ HT.supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     detectSessionInUrl: true,  // suporte a magic-links e recuperação de senha
   },
 });
+
+/* Expostos para chamadas a Edge Functions etc. (a anon key já está no client). */
+HT.supabaseUrl = SUPABASE_URL;

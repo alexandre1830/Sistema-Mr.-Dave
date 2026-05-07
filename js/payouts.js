@@ -83,5 +83,80 @@ HT.payouts = (() => {
     return { total, count, items, byStudent: Object.values(byStudent) };
   }
 
-  return { getMyPayout, PAID_STATUSES };
+  /**
+   * (Admin) Agrega o payout de TODOS os professores no período {from, to}.
+   * Retorna { grandTotal, paidLessons, totalLessons, justifiedLessons,
+   *          teacherCount, byTeacher: [{ teacherId, teacherName, defaultRate,
+   *                                       total, paidCount, totalCount, justifiedCount }] }
+   */
+  async function getAllTeachersPayout({ from, to } = {}) {
+    const db = HT.supabase;
+
+    /* Professores cadastrados */
+    const { data: teachers, error: tErr } = await db.from('profiles')
+      .select('id, name, default_lesson_rate')
+      .eq('role', 'teacher');
+    if (tErr) throw tErr;
+
+    /* Vínculos com sobrescritas */
+    const { data: links, error: lErr } = await db.from('student_teachers')
+      .select('student_id, teacher_id, rate_override');
+    if (lErr) throw lErr;
+
+    /* Frequência no período */
+    let q = db.from('attendance').select('id, student_id, teacher_id, date, status');
+    if (from) q = q.gte('date', from);
+    if (to)   q = q.lte('date', to);
+    const { data: att, error: aErr } = await q;
+    if (aErr) throw aErr;
+
+    /* Mapa: teacherId → bucket */
+    const byTeacher = {};
+    (teachers || []).forEach(t => {
+      byTeacher[t.id] = {
+        teacherId:      t.id,
+        teacherName:    t.name || '(sem nome)',
+        defaultRate:    Number(t.default_lesson_rate || 0),
+        total:          0,
+        paidCount:      0,
+        totalCount:     0,
+        justifiedCount: 0,
+      };
+    });
+
+    let grandTotal       = 0;
+    let paidLessons      = 0;
+    let totalLessons     = 0;
+    let justifiedLessons = 0;
+
+    (att || []).forEach(a => {
+      const tdata = byTeacher[a.teacher_id];
+      if (!tdata) return; /* aula com teacher inexistente — ignora */
+      const paid = PAID_STATUSES.has(a.status);
+      tdata.totalCount += 1;
+      totalLessons    += 1;
+      if (a.status === 'justified') {
+        tdata.justifiedCount += 1;
+        justifiedLessons    += 1;
+      }
+      if (paid) {
+        const rate = _rateFor(a.student_id, a.teacher_id, tdata.defaultRate, links || []);
+        tdata.paidCount += 1;
+        tdata.total     += rate;
+        paidLessons     += 1;
+        grandTotal      += rate;
+      }
+    });
+
+    return {
+      grandTotal,
+      paidLessons,
+      totalLessons,
+      justifiedLessons,
+      teacherCount: (teachers || []).length,
+      byTeacher: Object.values(byTeacher),
+    };
+  }
+
+  return { getMyPayout, getAllTeachersPayout, PAID_STATUSES };
 })();

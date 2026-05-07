@@ -52,10 +52,7 @@ HT.materiais = (() => {
     if (!iso) return '';
     return new Date(iso).toLocaleDateString('pt-BR', { day:'2-digit', month:'short', year:'numeric' });
   }
-  function escapeHTML(s) {
-    return String(s ?? '').replace(/[&<>"']/g,
-      c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
-  }
+  const escapeHTML = s => HT.utils.escapeHTML(s);
 
   /* ── menu de ações compartilhado (appended ao body) ── */
   let _actionsMenu = null;
@@ -456,7 +453,8 @@ HT.materiais = (() => {
     const msg = count
       ? `Excluir a pasta "${folder?.name}"? Os ${count} material(is) dentro dela ficarão sem pasta.`
       : `Excluir a pasta "${folder?.name}"?`;
-    if (!confirm(msg)) return;
+    const ok = await HT.modals.confirm(msg, { okLabel: 'Excluir pasta' });
+    if (!ok) return;
     try {
       await HT.storage.deleteFolder(id);
       if (currentFolderId === id) navigateTo(null);
@@ -692,7 +690,9 @@ HT.materiais = (() => {
      ==================================================================== */
   async function onDeleteMaterial(id) {
     const m = materials.find(x => x.id === id);
-    if (!m || !confirm(`Excluir "${m.name}"? O arquivo será removido permanentemente.`)) return;
+    if (!m) return;
+    const ok = await HT.modals.confirm(`Excluir "${m.name}"? O arquivo será removido permanentemente.`, { okLabel: 'Excluir' });
+    if (!ok) return;
     try {
       await HT.storage.deleteMaterial(id, m.filePath);
       HT.utils.showToast('Material excluído.', 'warning');
@@ -782,7 +782,7 @@ HT.materiais = (() => {
     });
 
     /* Busca */
-    searchInp().addEventListener('input', () => renderView());
+    searchInp().addEventListener('input', HT.utils.debounce(() => renderView(), 250));
 
     await load();
   }
