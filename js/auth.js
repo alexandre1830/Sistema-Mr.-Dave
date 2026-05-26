@@ -130,10 +130,13 @@ HT.auth = (() => {
   })();
 
   /* ====== Formulário de login ====== */
+  const REMEMBERED_EMAIL_KEY = 'ht_remembered_email';
+
   function initLoginForm() {
     const form       = document.getElementById('loginForm');
     const emailInp   = document.getElementById('email');
     const passInp    = document.getElementById('password');
+    const rememberCb = document.getElementById('rememberMe');
     const toggleBtn  = document.getElementById('togglePassword');
     const toggleIcon = document.getElementById('toggleIcon');
     const loginBtn   = document.getElementById('loginBtn');
@@ -142,6 +145,16 @@ HT.auth = (() => {
     const passErr    = document.getElementById('passwordError');
 
     if (!form) return;
+
+    /* Pré-preencher e-mail salvo (se houver) */
+    try {
+      const saved = localStorage.getItem(REMEMBERED_EMAIL_KEY);
+      if (saved && emailInp) {
+        emailInp.value = saved;
+        if (rememberCb) rememberCb.checked = true;
+        passInp?.focus();
+      }
+    } catch { /* localStorage indisponível — silencioso */ }
 
     toggleBtn?.addEventListener('click', () => {
       const isText = passInp.type === 'text';
@@ -196,6 +209,12 @@ HT.auth = (() => {
       loginBtn.classList.remove('is-loading');
 
       if (result.success) {
+        /* "Lembrar de mim": persiste/limpa o e-mail localmente */
+        try {
+          if (rememberCb?.checked) localStorage.setItem(REMEMBERED_EMAIL_KEY, email);
+          else                     localStorage.removeItem(REMEMBERED_EMAIL_KEY);
+        } catch { /* silencioso */ }
+
         alertBox.textContent = 'Acesso autorizado. Redirecionando...';
         alertBox.className   = 'login-alert success';
         setTimeout(() => window.location.replace('dashboard.html'), 800);
