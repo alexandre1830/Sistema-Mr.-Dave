@@ -108,8 +108,8 @@
 
     if (role !== 'teacher') return;  /* admin: financas.js já cuida */
 
-    /* Esconde view admin + botão "Novo Pagamento" */
-    document.getElementById('adminFinanceView').style.display = 'none';
+    /* Mostra a view do professor (HTML usa display:none por default p/ evitar FOUC
+       no admin). ui-roles.js cuida de esconder #adminFinanceView via data-admin-only. */
     document.getElementById('teacherFinanceView').style.display = '';
     document.getElementById('addPaymentBtn')?.style.setProperty('display', 'none');
 

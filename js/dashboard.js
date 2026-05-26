@@ -18,8 +18,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   const month = utils.getCurrentMonth();
   const role  = await HT.auth.getRole();
 
-  let students, classes, attendance;
-  let payments = []; /* admin: pagamentos recebidos */
+  let students, classes;
+  let attendance = []; /* admin: usado em monthAtt para o card "Aulas" */
+  let payments   = []; /* admin: pagamentos recebidos */
 
   if (role === 'admin') {
     [students, classes, attendance, payments] = await Promise.all([
@@ -29,11 +30,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       storage.getPayments(),
     ]);
   } else {
-    /* Professor: attendance ainda é usado para cards gerais (alunos, turmas, próximas aulas) */
-    [students, classes, attendance] = await Promise.all([
+    /* Professor: usa HT.payouts.getMyPayout para stats — não precisa de attendance global */
+    [students, classes] = await Promise.all([
       storage.getStudents(),
       storage.getClasses(),
-      storage.getAttendance(),
     ]);
   }
 
@@ -42,13 +42,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   /* ---------- Cards de resumo ---------- */
   async function loadStats() {
-    const monthAtt = attendance.filter(r => r.date.startsWith(month));
-
     utils.setTextContent('statStudents', students.length);
     utils.setTextContent('statClasses',  classes.length);
 
     if (role === 'admin') {
       /* Admin: frequência = total de registros individuais */
+      const monthAtt = attendance.filter(r => r.date.startsWith(month));
       utils.setTextContent('statLessons', monthAtt.length);
 
       /* Admin: receita = pagamentos com status "paid" no mês */

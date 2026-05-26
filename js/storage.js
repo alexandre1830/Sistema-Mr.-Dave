@@ -240,19 +240,6 @@ HT.storage = (() => {
     }
   }
 
-  async function setStudentTeacherRate(studentId, teacherId, rateOverride) {
-    const { error } = await db.from('student_teachers')
-      .upsert({ student_id: studentId, teacher_id: teacherId, rate_override: rateOverride });
-    if (error) throw error;
-  }
-
-  async function getStudentTeacherLinks(studentId) {
-    const { data, error } = await db.from('student_teachers')
-      .select('teacher_id, rate_override').eq('student_id', studentId);
-    if (error) throw error;
-    return data || [];
-  }
-
   /* Lado do professor: lista alunos vinculados (com rate_override) */
   async function getTeacherStudents(teacherId) {
     const { data, error } = await db.from('student_teachers')
@@ -1019,32 +1006,6 @@ HT.storage = (() => {
   }
 
   /* ====================================================================
-     GANHOS DO PROFESSOR (dashboard do professor)
-     ==================================================================== */
-
-  /**
-   * Retorna um mapa { studentId → rateOverride } para o professor logado.
-   * Usado para calcular a previsão de pagamento do mês no dashboard.
-   */
-  async function getMyStudentRates() {
-    const uid = await _uid();
-    const { data, error } = await db.from('student_teachers')
-      .select('student_id, rate_override')
-      .eq('teacher_id', uid);
-    if (error) throw error;
-    return Object.fromEntries((data || []).map(r => [r.student_id, r.rate_override]));
-  }
-
-  /* ====================================================================
-     PAYOUT do professor (Fase 3 — stub para a Fase 1 não quebrar imports)
-     ==================================================================== */
-  async function getMyPayout(_period) { return { total: 0, items: [] }; }
-
-  /* Stubs de compatibilidade */
-  function seedData() {}
-  function clearAll() {}
-
-  /* ====================================================================
      PENDENTES DE REPOSIÇÃO (faltas justificadas sem reposição registrada)
      ==================================================================== */
 
@@ -1095,7 +1056,7 @@ HT.storage = (() => {
     getPaymentsPage,
     getProfile, saveProfile,
     getTeachers, getTeacher, updateTeacher, deleteTeacher, inviteTeacher,
-    setStudentTeachers, setStudentTeacherRate, getStudentTeacherLinks,
+    setStudentTeachers,
     getTeacherStudents, setTeacherStudents,
     getTeacherClasses,  setTeacherClasses,
     getProgressCategories, saveProgressCategory, deleteProgressCategory,
@@ -1106,9 +1067,6 @@ HT.storage = (() => {
     getTeacherStudentSchedules,
     getFolders, saveFolder, deleteFolder,
     getMaterials, saveMaterial, deleteMaterial, uploadMaterialFile, getMaterialPublicUrl,
-    getMyStudentRates,
-    getMyPayout,
-    seedData, clearAll,
   };
 
 })();

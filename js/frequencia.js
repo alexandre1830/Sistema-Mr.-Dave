@@ -510,7 +510,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (classId) {
       container.classList.remove('att-students-selector--individual');
 
-      // Filter by classId from allStudents (reliable for both admin and teacher)
       const students = allStudents.filter(s => s.classId === classId);
 
       if (!students.length) {

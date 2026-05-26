@@ -97,14 +97,5 @@ HT.errors = (() => {
     report(e.reason, { source: 'unhandledrejection' });
   });
 
-  /* ------------------------------------------------------------------ */
-  /* Helper: envolve uma função async para capturar erros automaticamente */
-  function wrap(fn, context = {}) {
-    return async function(...args) {
-      try { return await fn.apply(this, args); }
-      catch (err) { report(err, context); throw err; }
-    };
-  }
-
-  return { report, wrap };
+  return { report };
 })();
