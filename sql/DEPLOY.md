@@ -1,226 +1,187 @@
 # Deploy SQL — Mr-Dave / Hey, Teacher!
 
-Este documento lista a ordem canônica de execução dos arquivos SQL e os
-passos manuais necessários no painel do Supabase.
-
-## Ordem canônica de execução
-
-Todos os arquivos `add-*.sql` (exceto `schema.sql`) são **idempotentes**
-— podem ser rodados múltiplas vezes sem efeito colateral.
-
-| # | Arquivo | Quando rodar | Tipo |
-|---|---|---|---|
-| 1 | `schema.sql` | Bootstrap do banco. **DESTRUTIVO** (faz `drop cascade`) | One-shot |
-| 2 | `add-availability.sql` | Após bootstrap | Idempotente |
-| 3 | `add-error-logs.sql` | Após bootstrap | Idempotente |
-| 4 | `add-materials.sql` | Após criar bucket "materials" no Storage | Idempotente |
-| 5 | `add-indexes.sql` | A qualquer momento (recomendado: assim que possível) | Idempotente |
-| 6 | `schedule-monthly-payments.sql` | Após deploy da Edge Function | Idempotente |
-| 7 | `audit-rls.sql` | Diagnóstico contínuo (apenas `SELECT`) | Read-only |
+Guia completo para deploy do banco em uma conta Supabase **nova/limpa**.
 
 ---
 
-## 0. Bootstrap inicial (apenas em banco vazio)
+## 📁 Estrutura dos arquivos
 
-**Onde:** Painel Supabase → SQL Editor
-
-**O que rodar:** `sql/schema.sql`
-
-**Resultado:** Cria todas as tabelas core, funções `is_admin()`,
-`current_role_name()`, `handle_new_user()`, e o trigger que cria
-automaticamente o `profile` quando um usuário é criado em `auth.users`.
-
-**Passos pós-bootstrap:**
-
-1. Crie o primeiro usuário pelo painel Supabase: Auth → Users → Add user
-2. Promova-o a admin no SQL Editor:
-   ```sql
-   update profiles set role = 'admin' where email = 'SEU_EMAIL_AQUI';
-   ```
-3. Faça login no sistema — esse usuário será o administrador.
-
-⚠️ **NÃO rode `schema.sql` em produção depois do bootstrap inicial** — apaga
-todos os dados.
+```
+sql/
+├── 01-bootstrap.sql        ← TUDO: tabelas, RLS, funções, índices, storage
+├── 02-cron-jobs.sql        ← Geração mensal de cobranças + mark-overdue
+├── audit-rls.sql           ← Diagnóstico (read-only)
+├── DEPLOY.md               ← este arquivo
+└── migrations/             ← Mudanças incrementais PÓS-deploy
+    └── README.md           ← convenção: YYYY-MM-DD-<descricao>.sql
+```
 
 ---
 
-## 1. Disponibilidade dos professores
+## 🚀 Deploy em conta Supabase nova (passo a passo)
 
-**Onde:** Painel Supabase → SQL Editor
+### Passo 1 — Criar o projeto Supabase
 
-**O que rodar:** `sql/add-availability.sql`
+1. Acesse https://supabase.com/dashboard
+2. New project → escolha nome, região (sugestão: `sa-east-1` São Paulo) e senha forte do banco
+3. Aguarde o provisionamento (~2 minutos)
 
-**Resultado:** Cria a tabela `teacher_availability` e suas RLS. Idempotente
-(usa `create table if not exists` + `drop policy if exists` antes do
-`create policy`).
+### Passo 2 — Atualizar credenciais no front-end
 
----
+Pegue as credenciais em **Project Settings → API**:
+- `Project URL` (algo como `https://xxxxx.supabase.co`)
+- `anon public key`
 
-## 2. Centralização de erros do front-end
+Atualize em `js/supabase.js`:
+```js
+const SUPABASE_URL  = 'https://xxxxx.supabase.co';
+const SUPABASE_ANON = 'eyJh...';
+```
 
-**Onde:** Painel Supabase → SQL Editor
+### Passo 3 — Rodar o bootstrap
 
-**O que rodar:** `sql/add-error-logs.sql`
+**Onde:** Painel Supabase → SQL Editor → New query
 
-**Resultado:** Cria a tabela `error_logs`. O módulo `js/errors.js` passa a
-persistir erros não tratados nessa tabela. Antes da migration rodar, falha
-silenciosamente — sem impacto no app.
+**O que rodar:** todo o conteúdo de `sql/01-bootstrap.sql`
 
----
+**Tempo:** ~5 segundos
 
-## 3. Materiais (arquivos compartilhados)
+**Resultado:** Cria 14 tabelas, todas as RLS policies, 16 índices, funções
+auxiliares (`is_admin`, `current_role_name`, `handle_new_user`) e o
+trigger de auto-criação de profile.
 
-### 3.1 — Criar o bucket no Storage
+✅ **Esperado:** "Success. No rows returned"
+
+⚠️ **AVISO:** este script é **destrutivo** — começa fazendo `drop cascade`.
+Só rode em banco vazio ou ambiente de desenvolvimento.
+
+### Passo 4 — Criar o bucket de materiais
 
 **Onde:** Painel Supabase → Storage → New bucket
 
 **Configuração:**
 - Nome: `materials`
-- Marque **Public bucket** (necessário para a pré-visualização via Office Online Viewer)
+- Marcar **Public bucket** (necessário para preview via Office Online Viewer)
 
-### 3.2 — Rodar a migration
+⚠️ As policies de storage para esse bucket já foram criadas pelo passo 3.
 
-**Onde:** Painel Supabase → SQL Editor
+### Passo 5 — Criar o primeiro admin
 
-**O que rodar:** `sql/add-materials.sql`
+**5.1.** No painel: Authentication → Users → "Add user"
+- Email: o e-mail real do administrador (ex: `mrdaveidiomas@gmail.com`)
+- Marcar "Auto Confirm User" (ou enviar magic-link)
 
-**Resultado:** Cria as tabelas `material_folders`, `materials`, todas as
-RLS dessas tabelas e as policies de `storage.objects` para o bucket
-"materials". Tudo idempotente.
-
----
-
-## 4. Índices de performance
-
-**Onde:** Painel Supabase → SQL Editor
-
-**O que rodar:** `sql/add-indexes.sql`
-
-**Resultado:** Cria índices em FKs muito consultadas (especialmente
-`student_teachers.teacher_id`, `attendance.teacher_id`,
-`attendance(teacher_id, date)`, `payments(status, due_date)`).
-
-Sem esses índices, as queries de RLS faziam seq scan em todas as
-páginas que listam alunos/aulas/pagamentos — pode dar speedup de
-até 10× em bancos com mais de algumas centenas de registros.
-
-Idempotente (usa `create index if not exists`). Pode rodar a qualquer
-momento, mesmo com dados em produção — operação online.
-
----
-
-## 5. Geração automática de cobranças
-
-### 5.1 — Deploy da Edge Function
-
-```bash
-cd Mr-Dave
-supabase functions deploy generate-monthly-payments
+**5.2.** No SQL Editor, promover a admin:
+```sql
+update profiles set role = 'admin'
+  where email = 'mrdaveidiomas@gmail.com';
 ```
 
-### 5.2 — Definir o segredo do cron
+**5.3.** Verificar:
+```sql
+select id, email, role from profiles where role = 'admin';
+```
+Deve retornar a linha do usuário.
 
+### Passo 6 — (OPCIONAL) Ativar automação mensal
+
+Se você quer geração automática de cobranças no dia 1 de cada mês:
+
+**6.1.** Deploy da Edge Function (via terminal local com `supabase` CLI):
 ```bash
-# Gere um valor aleatório longo (uuid, openssl, etc.)
+cd Sistema-Mr.-Dave
+supabase functions deploy generate-monthly-payments
 supabase secrets set CRON_SECRET=<valor-aleatório-longo>
 ```
 
-### 5.3 — Habilitar extensões e Vault
+**6.2.** No painel: Database → Extensions → habilitar `pg_cron` e `pg_net`
 
-**Onde:** Painel Supabase
+**6.3.** No painel: Database → Vault → cadastrar 2 secrets:
+- `cron_secret` = mesmo valor de `CRON_SECRET` acima
+- `project_url` = `https://<seu-projeto>.supabase.co`
 
-1. Database → Extensions: habilite `pg_cron` e `pg_net`
-2. Database → Vault → New Secret e cadastre:
-   - `cron_secret` = o **mesmo valor** de `CRON_SECRET` acima
-   - `project_url` = `https://<seu-projeto>.supabase.co`
+**6.4.** SQL Editor → rodar `sql/02-cron-jobs.sql`
 
-### 5.4 — Agendar via pg_cron
-
-**Onde:** Painel Supabase → SQL Editor
-
-**O que rodar:** `sql/schedule-monthly-payments.sql`
-
-**Resultado:** Agenda dois jobs no pg_cron:
-- Dia 1 de cada mês às 06:00 UTC → cria pagamentos `pending` para todos
-  os alunos ativos com `monthly_fee` configurado.
-- Diariamente às 03:15 UTC → marca pagamentos `pending` vencidos
-  como `overdue`.
-
-### 5.5 — Disparo manual
-
-Admin pode clicar em **Finanças → Gerar do mês** a qualquer momento para
-gerar cobranças do mês visível. Idempotente (alunos que já têm pagamento
-para a referência são ignorados).
-
-### 5.6 — Verificar agendamento
-
+**6.5.** Verificar:
 ```sql
 select jobname, schedule, command from cron.job;
 ```
+Deve listar `generate-monthly-payments` e `mark-overdue-payments`.
 
-Devem aparecer as duas linhas: `generate-monthly-payments` e
-`mark-overdue-payments`.
+### Passo 7 — Testar
 
----
-
-## 6. Auditoria de RLS (diagnóstico contínuo)
-
-**Onde:** Painel Supabase → SQL Editor
-
-**O que rodar:** `sql/audit-rls.sql`
-
-Os blocos `SELECT` listam:
-- todas as policies cadastradas
-- tabelas sem RLS habilitada
-- tabelas sem nenhuma policy
-
-⚠️ **Read-only** — não modifica nada. Pode rodar a qualquer momento.
+1. Acesse o sistema com o e-mail do admin → deve entrar como administrador
+2. Cadastre um aluno de teste
+3. Cadastre uma turma e vincule o aluno
+4. Marque uma frequência
+5. Use `audit-rls.sql` para confirmar que todas as policies estão ativas
 
 ---
 
-## Checklist final
+## 🔍 Diagnóstico (qualquer momento)
 
-- [ ] `schema.sql` rodado (uma única vez)
-- [ ] Primeiro admin criado e promovido via SQL
-- [ ] `add-availability.sql` rodado
-- [ ] `add-error-logs.sql` rodado
-- [ ] Bucket `materials` criado no Storage (público)
-- [ ] `add-materials.sql` rodado
-- [ ] **`add-indexes.sql` rodado**
-- [ ] Edge Function `generate-monthly-payments` deployada
-- [ ] `CRON_SECRET` configurado nos secrets da function
-- [ ] Vault: `cron_secret` + `project_url` cadastrados
-- [ ] Extensões `pg_cron` e `pg_net` habilitadas
-- [ ] `schedule-monthly-payments.sql` rodado
-- [ ] `select * from cron.job` mostra as duas tarefas
-- [ ] Teste manual do botão "Gerar do mês"
+**Onde:** SQL Editor
+
+**O que rodar:** `sql/audit-rls.sql` (apenas `SELECT`s — read-only, sem risco)
+
+Lista:
+- Todas as policies cadastradas
+- Tabelas sem RLS habilitada (deve estar vazia!)
+- Tabelas sem nenhuma policy (deve estar vazia!)
 
 ---
 
-## Manutenção futura
+## 🔧 Manutenção pós-deploy
 
-### Adicionar uma nova migration
+### Adicionar uma nova feature ao banco
 
-1. Crie `sql/add-<nome>.sql` seguindo o padrão idempotente:
-   - `create table if not exists ...`
-   - `drop policy if exists ... ; create policy ...`
-   - `create index if not exists ...`
-   - SECURITY DEFINER functions sempre com `set search_path = public`
-2. Adicione na seção "Ordem canônica" deste arquivo.
-3. Rode no SQL Editor da produção.
+1. Crie `sql/migrations/YYYY-MM-DD-<descricao>.sql` (ver `migrations/README.md`)
+2. Aplique no SQL Editor de produção
+3. Considere refletir a mudança no `01-bootstrap.sql` para futuros deploys
 
-### Re-bootstrap (resetar banco)
+### Resetar ambiente de desenvolvimento
 
-⚠️ **Apaga todos os dados.** Útil apenas em ambiente de desenvolvimento.
+Basta rodar `01-bootstrap.sql` novamente — apaga tudo e recria do zero.
 
-```
-1. Rodar schema.sql
-2. Rodar TODAS as migrations da seção "Ordem canônica" (passos 1-5)
-3. Recriar admin manualmente
+⚠️ **Nunca** faça isso em produção. Use migrations para mudanças.
+
+### Atualizar admin / adicionar segundo admin
+
+```sql
+-- Adicionar outro admin (mantendo os existentes)
+update profiles set role = 'admin'
+  where email = 'novo.admin@example.com';
+
+-- Remover admin (cuidado: não rode antes de ter pelo menos outro admin!)
+update profiles set role = 'teacher'
+  where email = 'antigo.admin@example.com';
+
+-- Listar todos os admins
+select email, name from profiles where role = 'admin';
 ```
 
-### Convenção de nomes de policies
+---
 
-`<table_abrev> <role> <command>` — ex: `att teacher insert`,
-`materials admin update`. Mantém policies organizadas e fáceis de buscar
-via `pg_policies`.
+## ✅ Checklist final de deploy
+
+- [ ] Projeto Supabase criado
+- [ ] Credenciais atualizadas em `js/supabase.js`
+- [ ] `01-bootstrap.sql` rodado com sucesso
+- [ ] Bucket `materials` criado (público)
+- [ ] Primeiro usuário criado em Auth → Users
+- [ ] Usuário promovido a admin via SQL
+- [ ] Login no sistema funcionando
+- [ ] (Opcional) Edge Function deployada
+- [ ] (Opcional) `CRON_SECRET` configurado em secrets + Vault
+- [ ] (Opcional) `02-cron-jobs.sql` rodado
+- [ ] (Opcional) `cron.job` mostra 2 tarefas agendadas
+- [ ] `audit-rls.sql` confirma 0 tabelas sem RLS/policy
+
+---
+
+## 📚 Convenções do projeto
+
+- **Idempotência**: novas migrations usam `if not exists` / `drop+create`
+- **SECURITY DEFINER**: sempre com `set search_path = public`
+- **Nome de policies**: `<tabela_abrev> <role> <comando>` (ex: `att teacher insert`)
+- **Naming de índices**: `idx_<tabela>_<campos>` (ex: `idx_attendance_teacher_date`)
